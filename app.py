@@ -8,7 +8,7 @@ import base64
 import random
 
 # ==========================================
-# 💾 [핵심 업데이트] 자동 저장 미니 데이터베이스 세팅
+# 💾 자동 저장 데이터베이스 세팅
 # ==========================================
 DATA_FILE = "withmember_db.json"
 
@@ -17,7 +17,6 @@ def load_data():
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                # 날짜 데이터를 파이썬이 인식할 수 있게 변환
                 for c in data.get('campaigns', []):
                     c['recruit_start'] = datetime.strptime(c['recruit_start'], "%Y-%m-%d").date()
                     c['recruit_end'] = datetime.strptime(c['recruit_end'], "%Y-%m-%d").date()
@@ -32,7 +31,6 @@ def save_data(campaigns, applications):
     camps_to_save = []
     for c in campaigns:
         c_copy = c.copy()
-        # 저장할 때는 날짜를 다시 글자(문자열)로 변환
         c_copy['recruit_start'] = c_copy['recruit_start'].strftime("%Y-%m-%d")
         c_copy['recruit_end'] = c_copy['recruit_end'].strftime("%Y-%m-%d")
         c_copy['exp_start'] = c_copy['exp_start'].strftime("%Y-%m-%d")
@@ -68,7 +66,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 새로고침해도 안 날아가도록 데이터 로딩
+# 3. 데이터 로딩
 if 'data_loaded' not in st.session_state:
     camps, apps = load_data()
     st.session_state['campaigns'] = camps
@@ -82,7 +80,7 @@ default_exp_start = default_recruit_end + timedelta(days=1)
 default_exp_end = default_exp_start + timedelta(weeks=4)
 
 # ==========================================
-# 🎁 캠페인 상세 팝업창
+# 🎁 캠페인 상세 팝업창 (Large)
 # ==========================================
 @st.dialog("✨ 캠페인 상세 정보 및 신청", width="large") 
 def open_campaign_modal(c):
@@ -132,7 +130,7 @@ def open_campaign_modal(c):
                         "contact": contact, "address": address, "blog_url": blog_url, 
                         "visitors": visitors, "review_link": "", "status": "신청완료"
                     })
-                    save_data(st.session_state['campaigns'], st.session_state['applications']) # 데이터 저장
+                    save_data(st.session_state['campaigns'], st.session_state['applications'])
                     st.success("신청이 완료되었습니다!")
                 else:
                     st.error("성함, 연락처, URL은 필수 항목입니다.")
@@ -153,7 +151,7 @@ def open_campaign_modal(c):
                         app['status'] = "리뷰제출완료"
                         submitted = True
                 if submitted: 
-                    save_data(st.session_state['campaigns'], st.session_state['applications']) # 데이터 저장
+                    save_data(st.session_state['campaigns'], st.session_state['applications'])
                     st.success("리뷰가 정상적으로 제출되었습니다.")
                 else: 
                     st.error("일치하는 신청 내역이 없습니다. 성함과 연락처를 확인해주세요.")
@@ -229,18 +227,29 @@ else:
                 platform = st.selectbox("플랫폼", ["네이버 블로그", "인스타그램", "유튜브"])
                 recruit_count = st.number_input("블로거 모집 인원", min_value=1, value=10)
             
-            guideline = st.text_area("가이드라인", value="1. 플레이스 5대 진단 포인트 준수\n2. 정중한 존댓말 필수")
+            # [업데이트] 위드멤버 전용 고정 가이드라인 삽입 (수정 가능하도록 height 300 지정)
+            default_guideline = """★체험가능 날짜 및 시간 : 15:00~17:00 브레이크 타임에는 체험이 불가능합니다.
+
+★동영상 1개 이상 첨부 부탁드립니다.
+
+1. 사진을 정성껏 다양하게 찍어 주세요.
+2. 동영상을 포함하여 사진은 최소 10장 이상 사용해주세요
+3. 하단에 지도 위치 링크를 꼭 넣어주세요.
+4. 텍스트 1,000자 이상 서술해주세요
+5. 리뷰 작성 시, 제목과 본문 내용에 지정된 키워드와 자율 키워드 1개를 3회 이상 기재해주세요.
+6. 체험 후 매장 구글 및 카카오맵 후기도 간단하게 작성해주세요"""
+            
+            guideline = st.text_area("📝 리뷰 가이드라인", value=default_guideline, height=300)
+            
             dcol1, dcol2 = st.columns(2)
             with dcol1: recruit_dates = st.date_input("모집 기간", [today.date(), default_recruit_end.date()])
             with dcol2: exp_dates = st.date_input("체험 기간", [default_exp_start.date(), default_exp_end.date()])
             
             if st.form_submit_button("등록 완료"):
                 if shop_name and len(recruit_dates) == 2 and len(exp_dates) == 2:
-                    # 이미지를 텍스트 데이터(base64)로 변환하여 DB에 안전하게 저장
                     images_b64 = []
                     for uf in uploaded_files[:4]:
-                        b64 = base64.b64encode(uf.getvalue()).decode('utf-8')
-                        images_b64.append(b64)
+                        images_b64.append(base64.b64encode(uf.getvalue()).decode('utf-8'))
                         
                     st.session_state['campaigns'].append({
                         "id": len(st.session_state['campaigns']), "shop": shop_name, "region": region, 
@@ -249,138 +258,155 @@ else:
                         "recruit_start": recruit_dates[0], "recruit_end": recruit_dates[1],
                         "exp_start": exp_dates[0], "exp_end": exp_dates[1], "status": "진행중"
                     })
-                    save_data(st.session_state['campaigns'], st.session_state['applications']) # 데이터 저장
+                    save_data(st.session_state['campaigns'], st.session_state['applications'])
                     st.success("성공적으로 등록되었습니다!")
 
     elif admin_menu == "캠페인 관리(수정/삭제)":
         st.title("🛠️ 캠페인 관리")
-        if not st.session_state['campaigns']: st.info("등록된 캠페인이 없습니다.")
+        if not st.session_state['campaigns']: 
+            st.info("등록된 캠페인이 없습니다.")
         else:
-            selected_shop = st.selectbox("관리할 캠페인 선택", [c['shop'] for c in st.session_state['campaigns']])
-            idx = next(i for i, c in enumerate(st.session_state['campaigns']) if c['shop'] == selected_shop)
-            c = st.session_state['campaigns'][idx]
+            # [업데이트] 선택창 삭제 후, 매장명 직접 입력 검색으로 변경
+            search_shop_admin = st.text_input("🔍 관리할 매장명 검색", placeholder="수정 또는 삭제할 매장명을 입력하고 엔터를 누르세요")
             
-            if st.button("❌ 이 캠페인 완전 삭제", type="primary"):
-                st.session_state['campaigns'].pop(idx)
-                save_data(st.session_state['campaigns'], st.session_state['applications']) # 삭제 후 자동 저장
-                st.rerun()
-                
-            with st.form("edit_form"):
-                st.write("### 캠페인 내용 수정")
-                edit_region = st.text_input("지역 수정", value=c.get('region', ''))
-                edit_offer = st.text_input("제공 내역 수정", value=c['offer'])
-                edit_keywords = st.text_input("키워드 수정", value=c['keywords'])
-                edit_recruit = st.number_input("모집 인원 수정", value=int(c['recruit_count']))
-                edit_guide = st.text_area("가이드라인 수정", value=c['guideline'])
-                if st.form_submit_button("수정 내용 저장"):
-                    st.session_state['campaigns'][idx].update({"region": edit_region, "offer": edit_offer, "keywords": edit_keywords, "recruit_count": edit_recruit, "guideline": edit_guide})
-                    save_data(st.session_state['campaigns'], st.session_state['applications']) # 수정 후 자동 저장
-                    st.success("수정이 완료되었습니다!")
+            if search_shop_admin:
+                matches = [c for c in st.session_state['campaigns'] if search_shop_admin.lower() in c['shop'].lower()]
+                if not matches:
+                    st.warning("해당 매장명으로 등록된 캠페인이 없습니다.")
+                else:
+                    # 검색 결과가 여러 개일 경우를 대비한 선택창 (정확한 수정을 위해)
+                    selected_shop = st.selectbox("검색된 캠페인 중 선택", [m['shop'] for m in matches]) if len(matches) > 1 else matches[0]['shop']
+                    idx = next(i for i, c in enumerate(st.session_state['campaigns']) if c['shop'] == selected_shop)
+                    c = st.session_state['campaigns'][idx]
+                    
+                    if st.button("❌ 이 캠페인 완전 삭제", type="primary"):
+                        st.session_state['campaigns'].pop(idx)
+                        save_data(st.session_state['campaigns'], st.session_state['applications'])
+                        st.rerun()
+                        
+                    with st.form("edit_form"):
+                        st.write(f"### '{c['shop']}' 캠페인 내용 수정")
+                        edit_region = st.text_input("지역 수정", value=c.get('region', ''))
+                        edit_offer = st.text_input("제공 내역 수정", value=c['offer'])
+                        edit_keywords = st.text_input("키워드 수정", value=c['keywords'])
+                        edit_recruit = st.number_input("모집 인원 수정", value=int(c['recruit_count']))
+                        edit_guide = st.text_area("가이드라인 수정", value=c['guideline'], height=300)
+                        if st.form_submit_button("수정 내용 저장"):
+                            st.session_state['campaigns'][idx].update({"region": edit_region, "offer": edit_offer, "keywords": edit_keywords, "recruit_count": edit_recruit, "guideline": edit_guide})
+                            save_data(st.session_state['campaigns'], st.session_state['applications'])
+                            st.success("수정이 완료되었습니다!")
+            else:
+                st.info("👆 위 검색창에 관리할 매장명을 입력해주세요.")
 
     elif admin_menu == "현황 대시보드":
         st.title("📊 현황 대시보드")
         if not st.session_state['campaigns']:
             st.info("등록된 캠페인이 없습니다.")
         else:
-            selected_shop = st.selectbox("캠페인 선택", [c['shop'] for c in st.session_state['campaigns']])
-            current_cam = next(c for c in st.session_state['campaigns'] if c['shop'] == selected_shop)
-            apps = [a for a in st.session_state['applications'] if a['shop'] == selected_shop]
+            # [업데이트] 대시보드에도 매장명 직접 입력 검색 적용
+            search_shop_dash = st.text_input("🔍 조회할 매장명 검색", placeholder="대시보드를 확인할 매장명을 입력하고 엔터를 누르세요")
             
-            tab_pending, tab_approved = st.tabs(["⏳ 대기 중인 신청자 및 선정", "🎉 선정된 블로거 명단"])
-            
-            with tab_pending:
-                pending_apps = [a for a in apps if a['status'] == "신청완료"]
-                if pending_apps:
-                    table_data_p = []
-                    for i, app in enumerate(pending_apps):
-                        visitors = int(app.get('visitors', 0))
-                        grade = "고급" if visitors >= 500 else "중급" if visitors >= 100 else "초급"
-                        table_data_p.append({
-                            "이름": app.get('name', ''), "계정URL": app.get('blog_url', ''), 
-                            "등급": grade, "일 방문": f"{visitors:,}", "연락처": app.get('contact', ''),
-                            "주소(지역)": app.get('address', ''), "상태": app['status']
-                        })
-                    st.dataframe(pd.DataFrame(table_data_p), column_config={"계정URL": st.column_config.LinkColumn("계정URL")}, hide_index=True, use_container_width=True)
+            if search_shop_dash:
+                matches = [c for c in st.session_state['campaigns'] if search_shop_dash.lower() in c['shop'].lower()]
+                if not matches:
+                    st.warning("해당 매장명으로 등록된 캠페인이 없습니다.")
+                else:
+                    selected_shop = st.selectbox("검색된 캠페인 중 선택", [m['shop'] for m in matches]) if len(matches) > 1 else matches[0]['shop']
+                    current_cam = next(c for c in st.session_state['campaigns'] if c['shop'] == selected_shop)
+                    apps = [a for a in st.session_state['applications'] if a['shop'] == selected_shop]
                     
-                    st.markdown("#### ✅ 블로거 선정 처리")
-                    options = [f"{a['name']} ({a['blog_url']})" for a in pending_apps]
-                    selected_to_approve = st.multiselect("선정할 블로거를 모두 선택하세요", options)
-                    if st.button("선택 인원 선정 완료 처리"):
-                        if selected_to_approve:
-                            for app in st.session_state['applications']:
-                                app_display = f"{app['name']} ({app['blog_url']})"
-                                if app['shop'] == selected_shop and app['status'] == "신청완료" and app_display in selected_to_approve:
-                                    app['status'] = "선정완료"
-                            save_data(st.session_state['campaigns'], st.session_state['applications']) # 승인 후 자동 저장
-                            st.success("성공적으로 '선정완료' 상태로 변경되었습니다!")
-                            st.rerun()
-                        else: st.warning("선정할 블로거를 선택해주세요.")
-                else: st.info("현재 대기 중인 블로거가 없습니다.")
-
-            with tab_approved:
-                approved_apps = [a for a in apps if a['status'] in ["선정완료", "리뷰제출완료"]]
-                if approved_apps:
-                    table_data_a = []
-                    for i, app in enumerate(approved_apps):
-                        visitors = int(app.get('visitors', 0))
-                        grade = "고급" if visitors >= 500 else "중급" if visitors >= 100 else "초급"
-                        submitted_link = app.get('review_link', '')
-                        table_data_a.append({
-                            "이름": app.get('name', ''), "계정URL": app.get('blog_url', ''), 
-                            "등급": grade, "일 방문": f"{visitors:,}", "연락처": app.get('contact', ''),
-                            "주소(지역)": app.get('address', ''), "상태": app['status'],
-                            "제출된 링크": submitted_link if submitted_link else "미제출"
-                        })
-                    st.dataframe(pd.DataFrame(table_data_a), column_config={"계정URL": st.column_config.LinkColumn("계정URL"), "제출된 링크": st.column_config.LinkColumn("제출된 링크")}, hide_index=True, use_container_width=True)
-                else: st.info("아직 선정된 블로거가 없습니다.")
-            
-            # ==========================================
-            # 📈 3가지 랜덤 마감 코멘트 시스템
-            # ==========================================
-            st.markdown("---")
-            if st.button("📈 자동 마감 보고서 생성"):
-                completed = [a['review_link'] for a in apps if a['review_link'] != ""]
-                
-                # 랜덤으로 송출될 3가지 코멘트 풀 생성
-                comments_pool = [
-                    f"대표님, 안녕하십니까. 위드멤버 마케팅팀입니다.<br>이번 <b>[{selected_shop}]</b> 체험단 캠페인이 성공적으로 마감되었습니다.<br><br>요청하신 메인 키워드 <b>'{current_cam['keywords']}'</b>(을)를 타겟으로 하여 총 <b>{len(completed)}명</b>의 검증된 프리미엄 리뷰어가 포스팅을 완료했습니다. 단순 조회수 증가를 넘어, 네이버 플레이스 5대 진단 포인트를 철저히 준수하고 잠재 고객의 방문을 유도하는 정중한 존댓말과 후킹 문구를 적용하여 실제 매장 유입을 극대화할 수 있도록 세팅을 완료하였습니다.",
-                    f"안녕하세요 대표님, 위드멤버 마케팅팀입니다.<br><b>[{selected_shop}]</b>의 체험단 프로젝트가 성황리에 마무리되어 최종 결과를 보고드립니다.<br><br>전달 주신 핵심 키워드 <b>'{current_cam['keywords']}'</b>에 맞춰 총 <b>{len(completed)}건</b>의 고품질 리뷰 발행이 완료되었습니다. 모든 포스팅은 단순 나열식 리뷰를 지양하고, 매장의 매력을 최대한 어필하는 활동성 있는 사진과 후킹 멘트로 구성되었습니다. 이를 통해 스마트플레이스로의 자연스러운 검색 유입 및 전환율 상승이 강력하게 기대됩니다.",
-                    f"위드멤버 마케팅팀에서 <b>[{selected_shop}]</b> 캠페인 최종 마감 현황을 안내해 드립니다.<br><br>총 <b>{len(completed)}명</b>의 우수 블로거들이 <b>'{current_cam['keywords']}'</b> 키워드를 중심으로 매장의 장점을 생생하게 포스팅하였습니다. 특히 당사의 까다로운 리뷰 가이드라인(존댓말 필수 사용, 새소식 연계 등)이 100% 반영되어, 검색 유저들에게 높은 신뢰감을 주고 실제 오프라인 방문으로 즉시 이어질 수 있는 탄탄한 온라인 마케팅 기반이 마련되었습니다."
-                ]
-                # 코멘트 중 하나를 무작위로 선택
-                eval_comment = random.choice(comments_pool)
-
-                html_code = f"""
-                <html>
-                <head><script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script></head>
-                <body style="font-family: 'Malgun Gothic', sans-serif;">
-                    <div id="rpt" style="background:#FFF; padding:40px; border:1px solid #EAECEF; border-radius:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
-                        <h2 style="color:#1A1A1A; border-bottom: 2px solid #4A90E2; padding-bottom: 15px; margin-bottom: 25px;">📊 [{selected_shop}] 마케팅 결과 보고서</h2>
-                        <p style="font-size: 1.05rem; color: #333;"><b>수신:</b> {selected_shop} 대표님<br><b>발신:</b> 위드멤버 마케팅팀</p>
-                        <div style="background:#F8F9FA; padding:25px; border-radius:10px; margin: 25px 0; line-height: 1.8; font-size: 0.95rem; color:#212529;">
-                            {eval_comment}
-                        </div>
-                        <h4 style="color:#2C3E50; margin-bottom: 15px; border-left: 4px solid #4A90E2; padding-left: 10px;">🔗 최종 발행된 리뷰 포스팅 링크</h4>
-                        <div style="background:#FFF; border: 1px solid #EAECEF; padding: 20px; border-radius: 10px; word-break: break-all; line-height: 2.0; font-size: 0.95rem;">
-                """
-                
-                if len(completed) > 0:
-                    for idx, link in enumerate(completed):
-                        html_code += f"<div style='margin-bottom: 8px;'><b>{idx+1}.</b> <a href='{link}' target='_blank' style='color:#4A90E2; text-decoration:underline;'>{link}</a></div>"
-                else: html_code += "<div style='color:#868E96;'>아직 제출된 리뷰 포스팅이 없습니다.</div>"
+                    tab_pending, tab_approved = st.tabs(["⏳ 대기 중인 신청자 및 선정", "🎉 선정된 블로거 명단"])
                     
-                html_code += """
-                        </div>
-                    </div>
-                    <button onclick="saveImg()" style="width:100%; margin-top:20px; padding:15px; background:#4A90E2; color:white; border:none; border-radius:10px; cursor:pointer; font-weight:bold; font-size: 1.05rem;">📸 보고서 이미지로 즉시 다운로드</button>
-                    <script>
-                        function saveImg() {
-                            html2canvas(document.getElementById('rpt'), {scale:2, useCORS:true}).then(c => {
-                                var a = document.createElement('a'); a.download = '위드멤버_{selected_shop}_마감보고서.png'; a.href = c.toDataURL('image/png'); a.click();
-                            });
-                        }
-                    </script>
-                </body>
-                </html>
-                """
-                components.html(html_code, height=900, scrolling=True)
+                    with tab_pending:
+                        pending_apps = [a for a in apps if a['status'] == "신청완료"]
+                        if pending_apps:
+                            table_data_p = []
+                            for i, app in enumerate(pending_apps):
+                                visitors = int(app.get('visitors', 0))
+                                grade = "고급" if visitors >= 500 else "중급" if visitors >= 100 else "초급"
+                                table_data_p.append({
+                                    "이름": app.get('name', ''), "계정URL": app.get('blog_url', ''), 
+                                    "등급": grade, "일 방문": f"{visitors:,}", "연락처": app.get('contact', ''),
+                                    "주소(지역)": app.get('address', ''), "상태": app['status']
+                                })
+                            st.dataframe(pd.DataFrame(table_data_p), column_config={"계정URL": st.column_config.LinkColumn("계정URL")}, hide_index=True, use_container_width=True)
+                            
+                            st.markdown("#### ✅ 블로거 선정 처리")
+                            options = [f"{a['name']} ({a['blog_url']})" for a in pending_apps]
+                            selected_to_approve = st.multiselect("선정할 블로거를 모두 선택하세요", options)
+                            if st.button("선택 인원 선정 완료 처리"):
+                                if selected_to_approve:
+                                    for app in st.session_state['applications']:
+                                        app_display = f"{app['name']} ({app['blog_url']})"
+                                        if app['shop'] == selected_shop and app['status'] == "신청완료" and app_display in selected_to_approve:
+                                            app['status'] = "선정완료"
+                                    save_data(st.session_state['campaigns'], st.session_state['applications'])
+                                    st.success("성공적으로 '선정완료' 상태로 변경되었습니다!")
+                                    st.rerun()
+                                else: st.warning("선정할 블로거를 선택해주세요.")
+                        else: st.info("현재 대기 중인 블로거가 없습니다.")
+
+                    with tab_approved:
+                        approved_apps = [a for a in apps if a['status'] in ["선정완료", "리뷰제출완료"]]
+                        if approved_apps:
+                            table_data_a = []
+                            for i, app in enumerate(approved_apps):
+                                visitors = int(app.get('visitors', 0))
+                                grade = "고급" if visitors >= 500 else "중급" if visitors >= 100 else "초급"
+                                submitted_link = app.get('review_link', '')
+                                table_data_a.append({
+                                    "이름": app.get('name', ''), "계정URL": app.get('blog_url', ''), 
+                                    "등급": grade, "일 방문": f"{visitors:,}", "연락처": app.get('contact', ''),
+                                    "주소(지역)": app.get('address', ''), "상태": app['status'],
+                                    "제출된 링크": submitted_link if submitted_link else "미제출"
+                                })
+                            st.dataframe(pd.DataFrame(table_data_a), column_config={"계정URL": st.column_config.LinkColumn("계정URL"), "제출된 링크": st.column_config.LinkColumn("제출된 링크")}, hide_index=True, use_container_width=True)
+                        else: st.info("아직 선정된 블로거가 없습니다.")
+                    
+                    st.markdown("---")
+                    if st.button("📈 자동 마감 보고서 생성"):
+                        completed = [a['review_link'] for a in apps if a['review_link'] != ""]
+                        
+                        comments_pool = [
+                            f"대표님, 안녕하십니까. 위드멤버 마케팅팀입니다.<br>이번 <b>[{selected_shop}]</b> 체험단 캠페인이 성공적으로 마감되었습니다.<br><br>요청하신 메인 키워드 <b>'{current_cam['keywords']}'</b>(을)를 타겟으로 하여 총 <b>{len(completed)}명</b>의 검증된 프리미엄 리뷰어가 포스팅을 완료했습니다. 단순 조회수 증가를 넘어, 네이버 플레이스 5대 진단 포인트를 철저히 준수하고 잠재 고객의 방문을 유도하는 정중한 존댓말과 후킹 문구를 적용하여 실제 매장 유입을 극대화할 수 있도록 세팅을 완료하였습니다.",
+                            f"안녕하세요 대표님, 위드멤버 마케팅팀입니다.<br><b>[{selected_shop}]</b>의 체험단 프로젝트가 성황리에 마무리되어 최종 결과를 보고드립니다.<br><br>전달 주신 핵심 키워드 <b>'{current_cam['keywords']}'</b>에 맞춰 총 <b>{len(completed)}건</b>의 고품질 리뷰 발행이 완료되었습니다. 모든 포스팅은 단순 나열식 리뷰를 지양하고, 매장의 매력을 최대한 어필하는 활동성 있는 사진과 후킹 멘트로 구성되었습니다. 이를 통해 스마트플레이스로의 자연스러운 검색 유입 및 전환율 상승이 강력하게 기대됩니다.",
+                            f"위드멤버 마케팅팀에서 <b>[{selected_shop}]</b> 캠페인 최종 마감 현황을 안내해 드립니다.<br><br>총 <b>{len(completed)}명</b>의 우수 블로거들이 <b>'{current_cam['keywords']}'</b> 키워드를 중심으로 매장의 장점을 생생하게 포스팅하였습니다. 특히 당사의 까다로운 리뷰 가이드라인(존댓말 필수 사용, 새소식 연계 등)이 100% 반영되어, 검색 유저들에게 높은 신뢰감을 주고 실제 오프라인 방문으로 즉시 이어질 수 있는 탄탄한 온라인 마케팅 기반이 마련되었습니다."
+                        ]
+                        eval_comment = random.choice(comments_pool)
+
+                        html_code = f"""
+                        <html>
+                        <head><script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script></head>
+                        <body style="font-family: 'Malgun Gothic', sans-serif;">
+                            <div id="rpt" style="background:#FFF; padding:40px; border:1px solid #EAECEF; border-radius:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+                                <h2 style="color:#1A1A1A; border-bottom: 2px solid #4A90E2; padding-bottom: 15px; margin-bottom: 25px;">📊 [{selected_shop}] 마케팅 결과 보고서</h2>
+                                <p style="font-size: 1.05rem; color: #333;"><b>수신:</b> {selected_shop} 대표님<br><b>발신:</b> 위드멤버 마케팅팀</p>
+                                <div style="background:#F8F9FA; padding:25px; border-radius:10px; margin: 25px 0; line-height: 1.8; font-size: 0.95rem; color:#212529;">
+                                    {eval_comment}
+                                </div>
+                                <h4 style="color:#2C3E50; margin-bottom: 15px; border-left: 4px solid #4A90E2; padding-left: 10px;">🔗 최종 발행된 리뷰 포스팅 링크</h4>
+                                <div style="background:#FFF; border: 1px solid #EAECEF; padding: 20px; border-radius: 10px; word-break: break-all; line-height: 2.0; font-size: 0.95rem;">
+                        """
+                        
+                        if len(completed) > 0:
+                            for idx, link in enumerate(completed):
+                                html_code += f"<div style='margin-bottom: 8px;'><b>{idx+1}.</b> <a href='{link}' target='_blank' style='color:#4A90E2; text-decoration:underline;'>{link}</a></div>"
+                        else: html_code += "<div style='color:#868E96;'>아직 제출된 리뷰 포스팅이 없습니다.</div>"
+                            
+                        html_code += """
+                                </div>
+                            </div>
+                            <button onclick="saveImg()" style="width:100%; margin-top:20px; padding:15px; background:#4A90E2; color:white; border:none; border-radius:10px; cursor:pointer; font-weight:bold; font-size: 1.05rem;">📸 보고서 이미지로 즉시 다운로드</button>
+                            <script>
+                                function saveImg() {
+                                    html2canvas(document.getElementById('rpt'), {scale:2, useCORS:true}).then(c => {
+                                        var a = document.createElement('a'); a.download = '위드멤버_{selected_shop}_마감보고서.png'; a.href = c.toDataURL('image/png'); a.click();
+                                    });
+                                }
+                            </script>
+                        </body>
+                        </html>
+                        """
+                        components.html(html_code, height=900, scrolling=True)
+            else:
+                st.info("👆 위 검색창에 대시보드를 확인할 매장명을 입력해주세요.")
