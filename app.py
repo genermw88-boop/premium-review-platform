@@ -66,32 +66,43 @@ st.markdown("""
     div[data-testid="stVerticalBlockBorderWrapper"] {
         border-radius: 20px !important; border: 1px solid #EBEFEF !important;
         box-shadow: 0 10px 24px rgba(0, 0, 0, 0.04) !important; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-        background-color: #FFFFFF !important; padding: 15px 12px !important; margin-bottom: 20px !important;
+        background-color: #FFFFFF !important; padding: 18px 15px !important; margin-bottom: 20px !important;
     }
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {
         border-color: #4A90E2 !important; box-shadow: 0 16px 32px rgba(74, 144, 226, 0.12) !important; transform: translateY(-6px) !important;
     }
     [data-testid="stImage"] img { border-radius: 14px !important; object-fit: cover !important; }
 
-    /* 🔴 [완벽 해결] 매장명 타이틀 강제 굵기 & 딥 네이비 색상 적용 */
+    /* 🔴 [복구 및 고급화] 이미지 위로 올라가는 매장명 박스(창) 디자인 */
     button[kind="tertiary"] { 
-        background: transparent !important; border: none !important; border-radius: 0 !important;
-        padding: 0 !important; margin-top: 14px !important; margin-bottom: 8px !important; 
-        justify-content: flex-start !important; text-align: left !important; box-shadow: none !important; 
+        background: #FFFFFF !important; 
+        border: 2px solid #1A237E !important; /* 딥 네이비 테두리 */
+        border-radius: 12px !important;
+        padding: 10px 10px !important; 
+        margin-bottom: 15px !important; /* 이미지와의 간격 */
+        justify-content: center !important; 
+        text-align: center !important; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important; 
+        width: 100% !important;
+        transition: all 0.2s ease-in-out !important;
     }
     button[kind="tertiary"] p, button[kind="tertiary"] span, button[kind="tertiary"] div {
-        font-size: 1.35rem !important; 
+        font-size: 1.25rem !important; 
         font-weight: 900 !important; 
-        color: #1A237E !important; /* 고급스러운 딥 네이비 지정 */
+        color: #1A237E !important; 
         letter-spacing: -0.5px !important; 
-        line-height: 1.3 !important; 
-        white-space: normal !important;
+        margin: 0 !important;
         transition: color 0.2s ease-in-out !important;
     }
+    button[kind="tertiary"]:hover { 
+        background: #1A237E !important; /* 마우스 올리면 배경이 네이비로 */
+        border-color: #1A237E !important;
+    }
     button[kind="tertiary"]:hover p, button[kind="tertiary"]:hover span, button[kind="tertiary"]:hover div { 
-        color: #E74C3C !important; /* 마우스 오버 시 레드 포인트 */
+        color: #FFFFFF !important; /* 마우스 올리면 글씨는 화이트로 */
     }
     
+    /* 뱃지 및 기타 정보 */
     .badge-exp { background-color: #8E44AD; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-right: 4px; box-shadow: 0 2px 4px rgba(142,68,173,0.2); }
     .badge-clip { background-color: #00C73C; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-right: 4px; box-shadow: 0 2px 4px rgba(0,199,60,0.2); }
     .badge-press { background-color: #34495E; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-right: 4px; box-shadow: 0 2px 4px rgba(52,73,94,0.2); }
@@ -104,7 +115,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 데이터 로딩 적용
+# 3. 데이터 로딩 
 if 'data_loaded' not in st.session_state:
     camps, apps = load_data()
     st.session_state['campaigns'] = camps
@@ -119,7 +130,7 @@ default_exp_start = default_recruit_end + timedelta(days=1)
 default_exp_end = default_exp_start + timedelta(weeks=4)
 
 # ==========================================
-# 🎁 캠페인 상세 팝업창 (내용 디자인 완전 개편)
+# 🎁 캠페인 상세 팝업창 
 # ==========================================
 @st.dialog("✨ 리뷰어스 상세 정보 및 신청", width="large") 
 def open_campaign_modal(c):
@@ -151,7 +162,6 @@ def open_campaign_modal(c):
         else:
             exp_period_display = f"{exp_start_val} ~ {exp_end_val}"
             
-        # 🔴 [완벽 해결] 밋밋한 텍스트를 크고 굵은 HTML 리스트로 예쁘게 정렬 
         details_html = f"""
         <div style="font-size: 1.05rem; line-height: 2.1; color: #2C3E50; padding: 10px 0;">
             <div style="margin-bottom: 4px;"><b>📍 지 역 :</b> <span style="font-weight:700; color:#111;">{c.get('region', '전국')}</span></div>
@@ -288,11 +298,17 @@ if not st.session_state['admin_logged_in']:
         for idx, c in enumerate(filtered_campaigns):
             with cols[idx % 4]: 
                 with st.container(border=True):
-                    # 1. 썸네일
+                    # 1. 매장명 박스 (창) - 썸네일 이미지 상단 배치
+                    region_text = f"[{c.get('region', '전국').split()[0]}]" if c.get('region') else ""
+                    title_display = f"{region_text} {c['shop']}"
+                    if st.button(title_display, key=f"btn_{c['id']}", type="tertiary", use_container_width=True):
+                        open_campaign_modal(c)
+                    
+                    # 2. 썸네일
                     if c.get('images'): display_b64_image(c['images'][0])
                     else: st.markdown('<div style="height:200px; background:#F1F3F5; display:flex; align-items:center; justify-content:center; color:#ADB5BD; border-radius:14px;">No Image</div>', unsafe_allow_html=True)
                     
-                    # 2. 카테고리 뱃지 & D-Day
+                    # 3. 카테고리 뱃지 & D-Day (이미지 바로 하단)
                     cat = c.get('category', '체험단')
                     if cat == "체험단": cat_badge_class = "badge-exp"
                     elif cat == "네이버 클립": cat_badge_class = "badge-clip"
@@ -304,13 +320,7 @@ if not st.session_state['admin_logged_in']:
                     days_left = (r_end - today_date).days
                     d_day_str = f"D-{days_left}" if days_left > 0 else ("D-Day" if days_left == 0 else "마감")
                     
-                    st.markdown(f'<div style="margin-top:14px;"><span class="{cat_badge_class}">{cat}</span><span class="d-day-badge">{d_day_str}</span></div>', unsafe_allow_html=True)
-                    
-                    # 3. 타이틀
-                    region_text = f"[{c.get('region', '전국').split()[0]}]" if c.get('region') else ""
-                    title_display = f"{region_text} {c['shop']}"
-                    if st.button(title_display, key=f"btn_{c['id']}", type="tertiary", use_container_width=True):
-                        open_campaign_modal(c)
+                    st.markdown(f'<div style="margin-top:16px;"><span class="{cat_badge_class}">{cat}</span><span class="d-day-badge">{d_day_str}</span></div>', unsafe_allow_html=True)
                     
                     # 4. 하단 정보
                     st.markdown(f'<div class="offer-text">🎁 {c["offer"]}</div>', unsafe_allow_html=True)
