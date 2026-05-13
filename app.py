@@ -8,20 +8,24 @@ import base64
 import random
 
 # ==========================================
-# 💾 자동 저장 데이터베이스 세팅
+# 💾 자동 저장 데이터베이스 세팅 (기존 데이터 완벽 연동)
 # ==========================================
 DATA_FILE = "reviewus_db.json"
+OLD_DATA_FILE = "withmember_db.json" # 이전 버전의 데이터를 불러오기 위한 장치
 
 def load_data():
-    if os.path.exists(DATA_FILE):
+    file_to_load = DATA_FILE if os.path.exists(DATA_FILE) else (OLD_DATA_FILE if os.path.exists(OLD_DATA_FILE) else None)
+    if file_to_load:
         try:
-            with open(DATA_FILE, "r", encoding="utf-8") as f:
+            with open(file_to_load, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 for c in data.get('campaigns', []):
                     c['recruit_start'] = datetime.strptime(c['recruit_start'], "%Y-%m-%d").date()
                     c['recruit_end'] = datetime.strptime(c['recruit_end'], "%Y-%m-%d").date()
                     c['exp_start'] = datetime.strptime(c['exp_start'], "%Y-%m-%d").date()
                     c['exp_end'] = datetime.strptime(c['exp_end'], "%Y-%m-%d").date()
+                    # 이전 데이터에 카테고리가 없다면 기본값 '체험단'으로 지정
+                    c['category'] = c.get('category', '체험단')
                 return data.get('campaigns', []), data.get('applications', [])
         except: pass
     return [], []
@@ -41,7 +45,7 @@ def save_data(campaigns, applications):
 def display_b64_image(b64_str):
     st.image(base64.b64decode(b64_str), use_container_width=True)
 
-# 1. 페이지 설정 (리뷰어스 네이밍 적용)
+# 1. 페이지 설정
 st.set_page_config(page_title="리뷰어스 프리미엄 체험단", layout="wide", initial_sidebar_state="collapsed")
 
 # 2. CSS (최고급 카드형 UI 및 세련된 타이틀 버튼 적용)
@@ -49,7 +53,6 @@ st.markdown("""
 <style>
     .stApp { background-color: #F8F9FA; color: #212529; font-family: 'Pretendard', sans-serif; }
     
-    /* 🔴 핵심 변경: 투박했던 매장명 버튼을 세련된 에디토리얼 스타일로 고급화 */
     button[kind="tertiary"] { 
         background: transparent !important; border: none !important; border-radius: 0 !important;
         padding: 0 !important; margin-top: 14px !important; margin-bottom: 8px !important; 
@@ -60,11 +63,14 @@ st.markdown("""
     }
     button[kind="tertiary"]:hover { color: #2980B9 !important; background: transparent !important; }
     
-    /* 카드 디자인: 약간의 패딩과 부드러운 그림자 */
     .card-box { padding: 0px; margin-bottom: 30px; transition: 0.2s; }
     .card-box:hover { transform: translateY(-3px); }
     
-    /* 뱃지 및 메타 정보 */
+    /* 뱃지 디자인 추가 (네이버 클립, 기자단 등) */
+    .badge-exp { background-color: #8E44AD; color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-right: 4px; }
+    .badge-clip { background-color: #00C73C; color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-right: 4px; }
+    .badge-press { background-color: #34495E; color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-right: 4px; }
+    
     .badge-blog { background-color: #03C75A; color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
     .badge-insta { background: linear-gradient(45deg, #f09433 0%, #dc2743 50%, #bc1888 100%); color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
     .badge-yt { background-color: #FF0000; color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
@@ -73,8 +79,10 @@ st.markdown("""
     .offer-text { font-size: 0.95rem; color: #2980B9; font-weight: 800; margin-top: 5px; }
     .app-count-text { font-size: 0.85rem; color: #555; margin-top: 12px; font-weight: 500; border-top: 1px dashed #EAECEF; padding-top: 10px; }
     
-    /* 사이드바 */
     [data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #EAECEF; }
+    
+    /* 카테고리 라디오 버튼 스타일링 */
+    div.row-widget.stRadio > div { flex-direction: row; gap: 15px; justify-content: center; margin-bottom: 30px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -126,6 +134,7 @@ def open_campaign_modal(c):
             
         st.markdown(f"""
         **📍 지역:** {c.get('region', '전국')}  
+        **🏷️ 분류:** {c.get('category', '체험단')}
         **🔗 매장 링크:** {place_link_html}  
         **🎁 제공 내역:** {c['offer']}  
         **🔑 필수 키워드:** {c['keywords']}  
@@ -207,7 +216,6 @@ with st.sidebar:
 # ==========================================
 if not st.session_state['admin_logged_in']:
     
-    # 세련되고 깔끔한 딥 다크 배너 적용 (리뷰어스 로고)
     st.markdown("""
         <div style="width:100%; padding: 60px 20px; background: linear-gradient(rgba(17, 17, 17, 0.7), rgba(17, 17, 17, 0.9)), url('https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=1200&auto=format&fit=crop') center/cover; border-radius:20px; text-align:center; margin-bottom:30px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
             <h1 style="color:#FFFFFF; margin:0; font-size:3.2rem; font-weight:900; letter-spacing: -1px;">REVIEW US</h1>
@@ -215,21 +223,29 @@ if not st.session_state['admin_logged_in']:
         </div>
     """, unsafe_allow_html=True)
     
+    # 🔍 검색창
     col_search1, col_search2 = st.columns(2)
     with col_search1: search_region = st.text_input("📍 지역 검색", placeholder="예: 강남, 부천")
     with col_search2: search_shop = st.text_input("🏪 매장명 검색", placeholder="예: 매장 상호명 입력")
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # 📌 [핵심] 캠페인 카테고리 필터
+    selected_category = st.radio("캠페인 분류", ["전체", "체험단", "네이버 클립", "기자단"], horizontal=True, label_visibility="collapsed")
     st.markdown("<br>", unsafe_allow_html=True)
     
     filtered_campaigns = []
     for c in st.session_state['campaigns']:
         match_region = search_region.lower() in c.get('region', '').lower() if search_region else True
         match_shop = search_shop.lower() in c['shop'].lower() if search_shop else True
-        if match_region and match_shop: filtered_campaigns.append(c)
+        match_category = (selected_category == "전체") or (c.get('category', '체험단') == selected_category)
+        
+        if match_region and match_shop and match_category:
+            filtered_campaigns.append(c)
     
     if not filtered_campaigns: 
         st.info("검색 조건에 맞는 캠페인이 없습니다.")
     else:
-        # 프리미엄 앱 스타일 카드형 레이아웃 복구 및 개선
         cols = st.columns(4) 
         for idx, c in enumerate(filtered_campaigns):
             with cols[idx % 4]: 
@@ -238,19 +254,25 @@ if not st.session_state['admin_logged_in']:
                     if c.get('images'): display_b64_image(c['images'][0])
                     else: st.markdown('<div style="height:200px; background:#F1F3F5; display:flex; align-items:center; justify-content:center; color:#ADB5BD;">No Image</div>', unsafe_allow_html=True)
                     
-                    # 2. 뱃지 + D-Day
-                    badge_class = "badge-blog"
-                    if "인스타" in c['platform']: badge_class = "badge-insta"
-                    elif "유튜브" in c['platform']: badge_class = "badge-yt"
+                    # 2. 카테고리 뱃지 & 플랫폼 뱃지 & D-Day
+                    cat = c.get('category', '체험단')
+                    cat_badge_class = "badge-exp"
+                    if cat == "네이버 클립": cat_badge_class = "badge-clip"
+                    elif cat == "기자단": cat_badge_class = "badge-press"
+                    
+                    plat = c.get('platform', '기타')
+                    plat_badge_class = "badge-blog"
+                    if "인스타" in plat: plat_badge_class = "badge-insta"
+                    elif "유튜브" in plat: plat_badge_class = "badge-yt"
                     
                     r_end = c['recruit_end']
                     if isinstance(r_end, str): r_end = datetime.strptime(r_end, "%Y-%m-%d").date()
                     days_left = (r_end - today_date).days
                     d_day_str = f"D-{days_left}" if days_left > 0 else ("D-Day" if days_left == 0 else "마감")
                     
-                    st.markdown(f'<div style="margin-top:12px;"><span class="{badge_class}">{c["platform"]}</span><span class="d-day-badge">{d_day_str}</span></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="margin-top:12px;"><span class="{cat_badge_class}">{cat}</span> <span class="{plat_badge_class}">{plat}</span><span class="d-day-badge">{d_day_str}</span></div>', unsafe_allow_html=True)
                     
-                    # 3. 타이틀 (세련된 에디토리얼 텍스트 형태로 변경)
+                    # 3. 타이틀 (에디토리얼 스타일 적용)
                     region_text = f"[{c.get('region', '전국').split()[0]}]" if c.get('region') else ""
                     title_display = f"{region_text} {c['shop']}"
                     if st.button(title_display, key=f"btn_{c['id']}", type="tertiary", use_container_width=True):
@@ -260,7 +282,6 @@ if not st.session_state['admin_logged_in']:
                     st.markdown(f'<div class="offer-text">🎁 {c["offer"]}</div>', unsafe_allow_html=True)
                     
                     app_count = len([a for a in st.session_state['applications'] if a['campaign_id'] == c['id']])
-                    # 깔끔한 점선으로 구분된 신청률 현황
                     st.markdown(f'<div class="app-count-text">👥 신청 <b><span style="color:#2980B9;">{app_count}</span></b> / 모집 {c["recruit_count"]}명</div>', unsafe_allow_html=True)
 
 else:
@@ -276,8 +297,10 @@ else:
                 offer = st.text_input("제공 내역")
                 uploaded_files = st.file_uploader("이미지 첨부 (최대 4장)", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
             with col2:
-                keywords = st.text_input("필수 키워드")
+                # [핵심] 캠페인 카테고리 선택 추가
+                category = st.selectbox("캠페인 유형", ["체험단", "네이버 클립", "기자단"])
                 platform = st.selectbox("플랫폼", ["네이버 블로그", "인스타그램", "유튜브"])
+                keywords = st.text_input("필수 키워드")
                 recruit_count = st.number_input("블로거 모집 인원", min_value=1, value=10)
             
             default_guideline = """★체험가능 날짜 및 시간 : 15:00~17:00 브레이크 타임에는 체험이 불가능합니다.
@@ -306,6 +329,7 @@ else:
                         
                     st.session_state['campaigns'].append({
                         "id": len(st.session_state['campaigns']), "shop": shop_name, "region": region, 
+                        "category": category, # 저장 항목에 유형 추가
                         "place_link": place_link, "offer": offer, "images": images_b64, 
                         "keywords": keywords, "platform": platform, "recruit_count": recruit_count, 
                         "guideline": guideline, "recruit_start": recruit_dates[0], "recruit_end": recruit_dates[1],
@@ -334,7 +358,14 @@ else:
                         
                     with st.form("edit_form"):
                         st.write(f"### '{c['shop']}' 캠페인 내용 수정")
-                        edit_region = st.text_input("지역 수정", value=c.get('region', ''))
+                        
+                        ecol1, ecol2 = st.columns(2)
+                        with ecol1:
+                            edit_region = st.text_input("지역 수정", value=c.get('region', ''))
+                        with ecol2:
+                            current_cat = c.get('category', '체험단')
+                            edit_category = st.selectbox("캠페인 유형 수정", ["체험단", "네이버 클립", "기자단"], index=["체험단", "네이버 클립", "기자단"].index(current_cat) if current_cat in ["체험단", "네이버 클립", "기자단"] else 0)
+
                         edit_place_link = st.text_input("매장 플레이스 링크 수정", value=c.get('place_link', ''))
                         edit_offer = st.text_input("제공 내역 수정", value=c['offer'])
                         edit_keywords = st.text_input("키워드 수정", value=c['keywords'])
@@ -344,8 +375,8 @@ else:
                         
                         if st.form_submit_button("수정 내용 저장"):
                             st.session_state['campaigns'][idx].update({
-                                "region": edit_region, "place_link": edit_place_link, "offer": edit_offer, 
-                                "keywords": edit_keywords, "recruit_count": edit_recruit, 
+                                "region": edit_region, "category": edit_category, "place_link": edit_place_link, 
+                                "offer": edit_offer, "keywords": edit_keywords, "recruit_count": edit_recruit, 
                                 "guideline": edit_guide, "exp_extend_days": edit_extend_days
                             })
                             save_data(st.session_state['campaigns'], st.session_state['applications'])
@@ -418,7 +449,7 @@ else:
                         completed = [a['review_link'] for a in apps if a['review_link'] != ""]
                         
                         comments_pool = [
-                            f"대표님, 안녕하십니까. 리뷰어스 마케팅팀입니다.<br>이번 <b>[{selected_shop}]</b> 체험단 캠페인이 성공적으로 마감되었습니다.<br><br>요청하신 메인 키워드 <b>'{current_cam['keywords']}'</b>(을)를 타겟으로 하여 총 <b>{len(completed)}명</b>의 검증된 프리미엄 리뷰어가 포스팅을 완료했습니다. 단순 조회수 증가를 넘어, 네이버 플레이스 5대 진단 포인트를 철저히 준수하고 잠재 고객의 방문을 유도하는 정중한 존댓말과 후킹 문구를 적용하여 실제 매장 유입을 극대화할 수 있도록 세팅을 완료하였습니다.",
+                            f"대표님, 안녕하십니까. 리뷰어스 마케팅팀입니다.<br>이번 <b>[{selected_shop}]</b> 캠페인이 성공적으로 마감되었습니다.<br><br>요청하신 메인 키워드 <b>'{current_cam['keywords']}'</b>(을)를 타겟으로 하여 총 <b>{len(completed)}명</b>의 검증된 프리미엄 리뷰어가 포스팅을 완료했습니다. 단순 조회수 증가를 넘어, 네이버 플레이스 5대 진단 포인트를 철저히 준수하고 잠재 고객의 방문을 유도하는 정중한 존댓말과 후킹 문구를 적용하여 실제 매장 유입을 극대화할 수 있도록 세팅을 완료하였습니다.",
                             f"안녕하세요 대표님, 리뷰어스 마케팅팀입니다.<br><b>[{selected_shop}]</b>의 체험단 프로젝트가 성황리에 마무리되어 최종 결과를 보고드립니다.<br><br>전달 주신 핵심 키워드 <b>'{current_cam['keywords']}'</b>에 맞춰 총 <b>{len(completed)}건</b>의 고품질 리뷰 발행이 완료되었습니다. 모든 포스팅은 단순 나열식 리뷰를 지양하고, 매장의 매력을 최대한 어필하는 활동성 있는 사진과 후킹 멘트로 구성되었습니다. 이를 통해 스마트플레이스로의 자연스러운 검색 유입 및 전환율 상승이 강력하게 기대됩니다.",
                             f"리뷰어스 마케팅팀에서 <b>[{selected_shop}]</b> 캠페인 최종 마감 현황을 안내해 드립니다.<br><br>총 <b>{len(completed)}명</b>의 우수 블로거들이 <b>'{current_cam['keywords']}'</b> 키워드를 중심으로 매장의 장점을 생생하게 포스팅하였습니다. 특히 당사의 까다로운 리뷰 가이드라인(존댓말 필수 사용, 새소식 연계 등)이 100% 반영되어, 검색 유저들에게 높은 신뢰감을 주고 실제 오프라인 방문으로 즉시 이어질 수 있는 탄탄한 온라인 마케팅 기반이 마련되었습니다."
                         ]
