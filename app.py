@@ -6,7 +6,7 @@ import streamlit.components.v1 as components
 # 1. 페이지 설정
 st.set_page_config(page_title="위드멤버 프리미엄 체험단", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS (디자인 및 레이아웃)
+# 2. CSS 
 st.markdown("""
 <style>
     .stApp { background-color: #F4F7F6; color: #212529; font-family: 'Pretendard', sans-serif; }
@@ -38,7 +38,7 @@ default_exp_start = default_recruit_end + timedelta(days=1)
 default_exp_end = default_exp_start + timedelta(weeks=4)
 
 # ==========================================
-# 🎁 캠페인 상세 팝업창 (폭 확대 버전: Large)
+# 🎁 캠페인 상세 팝업창 
 # ==========================================
 @st.dialog("✨ 캠페인 상세 정보 및 신청", width="large") 
 def open_campaign_modal(c):
@@ -136,19 +136,29 @@ if not st.session_state['admin_logged_in']:
     # [블로거 메인 화면]
     st.markdown('<div style="width:100%; padding: 50px 20px; background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url(\'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=1200&auto=format&fit=crop\') center/cover; border-radius:20px; text-align:center; margin-bottom:20px;"><h1 style="color:white;">PREMIUM CAMPAIGN</h1><p style="color:#F1E5AC;">위드멤버 프리미엄 체험단</p></div>', unsafe_allow_html=True)
     
-    # [해결 1] 지역 및 매장명 검색창 추가
-    search_query = st.text_input("🔍 지역 또는 매장명 검색", placeholder="예: 강남, 홍대, 혹은 특정 매장명 입력")
+    # [해결 1] 지역과 매장명 검색창 완벽 분리
+    col_search1, col_search2 = st.columns(2)
+    with col_search1:
+        search_region = st.text_input("📍 지역 검색", placeholder="예: 강남, 부천")
+    with col_search2:
+        search_shop = st.text_input("🏪 매장명 검색", placeholder="예: 매장 상호명 입력")
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # 검색 필터링 로직
     filtered_campaigns = []
     for c in st.session_state['campaigns']:
-        target_text = c['shop'] + " " + c['keywords'] + " " + c.get('region', '')
-        if not search_query or search_query.lower() in target_text.lower():
+        match_region = True
+        match_shop = True
+        
+        if search_region:
+            match_region = search_region.lower() in c.get('region', '').lower()
+        if search_shop:
+            match_shop = search_shop.lower() in c['shop'].lower()
+            
+        if match_region and match_shop:
             filtered_campaigns.append(c)
     
     if not filtered_campaigns: 
-        st.info("조건에 맞는 캠페인이 없습니다. 다른 키워드로 검색해보세요.")
+        st.info("검색 조건에 맞는 캠페인이 없습니다.")
     else:
         cols = st.columns(4) 
         for idx, c in enumerate(filtered_campaigns):
@@ -172,7 +182,6 @@ else:
             col1, col2 = st.columns(2)
             with col1:
                 shop_name = st.text_input("매장명")
-                # [해결 2] 캠페인 등록 시 지역 입력란 추가
                 region = st.text_input("지역 (예: 서울 강남구)") 
                 offer = st.text_input("제공 내역")
                 uploaded_files = st.file_uploader("이미지 첨부 (최대 4장)", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
@@ -229,7 +238,6 @@ else:
             current_cam = next(c for c in st.session_state['campaigns'] if c['shop'] == selected_shop)
             apps = [a for a in st.session_state['applications'] if a['shop'] == selected_shop]
             
-            # [해결 3] 대기 명단과 선정 명단을 분리하는 탭 생성
             tab_pending, tab_approved = st.tabs(["⏳ 대기 중인 신청자 및 선정", "🎉 선정된 블로거 명단"])
             
             with tab_pending:
@@ -255,7 +263,7 @@ else:
                                 app_display = f"{app['name']} ({app['blog_url']})"
                                 if app['shop'] == selected_shop and app['status'] == "신청완료" and app_display in selected_to_approve:
                                     app['status'] = "선정완료"
-                            st.success("선택한 블로거들이 성공적으로 '선정완료' 상태로 변경되었습니다!")
+                            st.success("성공적으로 '선정완료' 상태로 변경되었습니다!")
                             st.rerun()
                         else:
                             st.warning("선정할 블로거를 선택해주세요.")
@@ -280,34 +288,52 @@ else:
                 else:
                     st.info("아직 이 캠페인에 선정된 블로거가 없습니다.")
             
-            # 마감 리포트
+            # [해결 2] 마감 리포트 디자인 및 클릭 링크 완벽 개편
             st.markdown("---")
             if st.button("📈 자동 마감 보고서 생성"):
                 completed = [a['review_link'] for a in apps if a['review_link'] != ""]
+                
+                # 전문적인 에이전시 보고용 멘트로 변경
+                eval_comment = f"대표님, 안녕하십니까. 위드멤버 마케팅팀입니다.<br>이번 <b>[{selected_shop}]</b> 체험단 캠페인이 성공적으로 마감되었습니다.<br><br>요청하신 메인 키워드 <b>'{current_cam['keywords']}'</b>(을)를 타겟으로 하여 총 <b>{len(completed)}명</b>의 검증된 프리미엄 리뷰어가 포스팅을 완료했습니다. 단순 조회수 증가를 넘어, 네이버 플레이스 5대 진단 포인트를 철저히 준수하고 잠재 고객의 방문을 유도하는 정중한 존댓말과 후킹 문구를 적용하여 실제 매장 유입을 극대화할 수 있도록 세팅을 완료하였습니다."
+
+                # HTML 보고서 생성 (word-break 적용하여 링크가 튀어나가지 않음, a 태그로 클릭 이동 구현)
                 html_code = f"""
                 <html>
                 <head><script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script></head>
-                <body>
-                    <div id="rpt" style="background:#FFF; padding:40px; border:1px solid #EEE; border-radius:15px;">
-                        <h2 style="text-align:center;">[{selected_shop}] 마감 리포트</h2>
-                        <hr style="border:1px solid #4A90E2;">
-                        <p><b>매장명:</b> {selected_shop} | <b>키워드:</b> {current_cam['keywords']}</p>
-                        <p><b>결과:</b> 총 {len(completed)}건 포스팅 완료</p>
-                        <div style="background:#F8F9FA; padding:15px; border-radius:10px;">
-                            <b>마감 총평:</b> 본 캠페인은 목표한 키워드 노출과 플레이스 활성화를 위해 가이드라인에 맞춰 정성스럽게 작성되었습니다.
+                <body style="font-family: 'Malgun Gothic', sans-serif;">
+                    <div id="rpt" style="background:#FFF; padding:40px; border:1px solid #EAECEF; border-radius:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+                        <h2 style="color:#1A1A1A; border-bottom: 2px solid #4A90E2; padding-bottom: 15px; margin-bottom: 25px;">📊 [{selected_shop}] 마케팅 결과 보고서</h2>
+                        <p style="font-size: 1.05rem; color: #333;"><b>수신:</b> {selected_shop} 대표님<br><b>발신:</b> 위드멤버 마케팅팀</p>
+                        
+                        <div style="background:#F8F9FA; padding:25px; border-radius:10px; margin: 25px 0; line-height: 1.8; font-size: 0.95rem; color:#212529;">
+                            {eval_comment}
                         </div>
-                        <h4>발행 링크 취합</h4>
-                        {"".join([f"<div>{idx+1}. {l}</div>" for idx, l in enumerate(completed)])}
+                        
+                        <h4 style="color:#2C3E50; margin-bottom: 15px; border-left: 4px solid #4A90E2; padding-left: 10px;">🔗 최종 발행된 리뷰 포스팅 링크</h4>
+                        <div style="background:#FFF; border: 1px solid #EAECEF; padding: 20px; border-radius: 10px; word-break: break-all; line-height: 2.0; font-size: 0.95rem;">
+                """
+                
+                if len(completed) > 0:
+                    for idx, link in enumerate(completed):
+                        # 실제 링크를 그대로 출력하고, 클릭 시 새 창(_blank)에서 열리도록 a 태그 사용
+                        html_code += f"<div style='margin-bottom: 8px;'><b>{idx+1}.</b> <a href='{link}' target='_blank' style='color:#4A90E2; text-decoration:underline;'>{link}</a></div>"
+                else:
+                    html_code += "<div style='color:#868E96;'>아직 제출된 리뷰 포스팅이 없습니다.</div>"
+                    
+                html_code += """
+                        </div>
                     </div>
-                    <button onclick="saveImg()" style="width:100%; margin-top:20px; padding:15px; background:#4A90E2; color:white; border:none; border-radius:10px; cursor:pointer;">📸 보고서 이미지로 다운로드</button>
+                    <button onclick="saveImg()" style="width:100%; margin-top:20px; padding:15px; background:#4A90E2; color:white; border:none; border-radius:10px; cursor:pointer; font-weight:bold; font-size: 1.05rem;">📸 보고서 이미지로 즉시 다운로드</button>
                     <script>
-                        function saveImg() {{
-                            html2canvas(document.getElementById('rpt'), {{scale:2}}).then(c => {{
-                                var a = document.createElement('a'); a.download = '{selected_shop}_마감리포트.png'; a.href = c.toDataURL(); a.click();
-                            }});
-                        }}
+                        function saveImg() {
+                            html2canvas(document.getElementById('rpt'), {scale:2, useCORS:true}).then(c => {
+                                var a = document.createElement('a'); a.download = '위드멤버_{selected_shop}_마감보고서.png'; a.href = c.toDataURL('image/png'); a.click();
+                            });
+                        }
                     </script>
                 </body>
                 </html>
                 """
-                components.html(html_code, height=700, scrolling=True)
+                
+                # Height를 넉넉하게 주어 스크롤 없이 전체 보고서를 볼 수 있게 세팅
+                components.html(html_code, height=900, scrolling=True)
