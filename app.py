@@ -5,16 +5,25 @@ from datetime import datetime, timedelta
 # 1. 페이지 설정
 st.set_page_config(page_title="위드멤버 프리미엄 체험단", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS (화이트 톤 & 썸네일 갤러리 디자인)
+# 2. CSS (화이트 톤 & 썸네일 갤러리 디자인 업그레이드)
 st.markdown("""
 <style>
     .stApp { background-color: #F8F9FA; color: #212529; }
-    .card-box { background-color: #FFFFFF; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #E9ECEF; }
-    div.stButton > button { background-color: #4A90E2; color: white; border-radius: 6px; font-weight: bold; width: 100%; border: none; }
+    .card-box { 
+        background-color: #FFFFFF; 
+        padding: 15px; 
+        border-radius: 12px; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* 그림자 효과 강화 */
+        margin-bottom: 20px; 
+        border: 1px solid #E9ECEF; 
+        transition: transform 0.2s; /* 마우스 올렸을 때 애니메이션 준비 */
+    }
+    .card-box:hover { transform: translateY(-5px); } /* 마우스 올리면 살짝 위로 뜸 */
+    div.stButton > button { background-color: #4A90E2; color: white; border-radius: 8px; font-weight: bold; width: 100%; border: none; padding: 10px; }
     div.stButton > button:hover { background-color: #357ABD; color: white; }
-    .shop-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 5px; color: #212529; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-    .offer-text { font-size: 0.9rem; color: #E74C3C; font-weight: bold; margin-bottom: 5px; }
-    .info-text { font-size: 0.8rem; color: #6C757D; margin-bottom: 2px; }
+    .shop-title { font-size: 1.2rem; font-weight: 900; margin-top: 10px; margin-bottom: 5px; color: #111111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+    .offer-text { font-size: 0.95rem; color: #E74C3C; font-weight: bold; margin-bottom: 5px; }
+    .info-text { font-size: 0.85rem; color: #495057; margin-bottom: 3px; }
     [data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #E9ECEF; }
 </style>
 """, unsafe_allow_html=True)
@@ -59,15 +68,18 @@ with st.sidebar:
 # ==========================================
 if not st.session_state['admin_logged_in']:
     # ----------------------------------------
-    # [블로거 화면 - 3.jpg 스타일 바둑판 배열]
+    # [블로거 화면 - 바둑판 배열]
     # ----------------------------------------
-    st.image("https://via.placeholder.com/1200x200/F1F3F5/4A90E2?text=Premium+Review+Platform+Open", use_container_width=True) # 상단 배너 예시
-    st.markdown("### ✨ 진행 중인 프리미엄 캠페인")
-    st.write("로컬 비즈니스 성장을 함께할 상위 10% 리뷰어를 모십니다.")
-    st.markdown("---")
+    # 상단 배너 (깨지지 않는 HTML 그라데이션 디자인 적용)
+    st.markdown("""
+        <div style="width:100%; height:140px; background: linear-gradient(135deg, #4A90E2 0%, #50E3C2 100%); border-radius:15px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; margin-bottom:30px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+            <h1 style="color:white; margin:0; font-size:2rem; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">✨ 프리미엄 체험단 플랫폼</h1>
+            <p style="color:white; margin:0; font-size:1rem; opacity:0.9;">로컬 비즈니스 성장을 함께할 상위 10% 리뷰어를 모십니다.</p>
+        </div>
+    """, unsafe_allow_html=True)
 
     if not st.session_state['campaigns']:
-        st.info("현재 준비 중인 캠페인이 없습니다.")
+        st.info("현재 준비 중인 캠페인이 없습니다. 곧 새로운 캠페인으로 찾아뵙겠습니다!")
     else:
         # 4열 바둑판 그리드 생성
         cols = st.columns(4) 
@@ -75,29 +87,29 @@ if not st.session_state['admin_logged_in']:
             with cols[idx % 4]: # 4개마다 줄바꿈
                 st.markdown('<div class="card-box">', unsafe_allow_html=True)
                 
-                # 이미지 노출
+                # 이미지 노출 (이미지가 없을 경우 예쁜 그라데이션 박스 노출)
                 if c['image'] is not None:
                     st.image(c['image'], use_container_width=True)
                 else:
-                    st.image("https://via.placeholder.com/300x300.png?text=No+Image", use_container_width=True)
+                    st.markdown('<div style="height:180px; background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%); border-radius:8px; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold;">이미지 준비중</div>', unsafe_allow_html=True)
                 
-                # 정보 텍스트 (줄바꿈 없이 깔끔하게)
+                # 정보 텍스트
                 st.markdown(f'<div class="shop-title">{c["shop"]}</div>', unsafe_allow_html=True)
                 st.markdown(f'<div class="offer-text">{c["offer"]}</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="info-text">모집: {c["recruit_start"].strftime("%m.%d")} ~ {c["recruit_end"].strftime("%m.%d")}</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="info-text">인원: {c["recruit_count"]}명 ({c["platform"]})</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="info-text">🗓️ 모집: {c["recruit_start"].strftime("%m.%d")} ~ {c["recruit_end"].strftime("%m.%d")}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="info-text">👥 인원: {c["recruit_count"]}명 ({c["platform"]})</div>', unsafe_allow_html=True)
                 
                 st.write("") # 여백
                 
                 # 팝업 형태의 신청 버튼
                 with st.popover("자세히 보기 및 신청", use_container_width=True):
                     st.markdown(f"#### 📍 {c['shop']}")
-                    st.write(f"**키워드:** {c['keywords']}")
-                    st.write(f"**체험기간:** {c['exp_start']} ~ {c['exp_end']}")
+                    st.write(f"**🔑 필수 키워드:** {c['keywords']}")
+                    st.write(f"**🏃 체험 기간:** {c['exp_start']} ~ {c['exp_end']}")
                     st.divider()
                     
                     # 탭 분리: 신청하기 / 리뷰제출
-                    tab_apply, tab_submit = st.tabs(["신청서 작성", "리뷰 제출 (선정자)"])
+                    tab_apply, tab_submit = st.tabs(["✍️ 신청서 작성", "✅ 리뷰 제출 (선정자)"])
                     with tab_apply:
                         with st.form(f"apply_{c['id']}"):
                             blog_url = st.text_input("운영 채널 URL")
@@ -106,17 +118,17 @@ if not st.session_state['admin_logged_in']:
                                 st.session_state['applications'].append({
                                     "campaign_id": c['id'], "shop": c['shop'], "blog_url": blog_url, "contact": contact, "review_link": "", "status": "신청완료"
                                 })
-                                st.success("신청되었습니다.")
+                                st.success("신청이 완료되었습니다.")
                     with tab_submit:
                         with st.form(f"submit_{c['id']}"):
-                            my_contact = st.text_input("신청 연락처 확인")
-                            final_link = st.text_input("리뷰 URL")
+                            my_contact = st.text_input("신청 시 입력한 연락처")
+                            final_link = st.text_input("작성 완료된 리뷰 URL")
                             if st.form_submit_button("제출 완료"):
                                 for app in st.session_state['applications']:
                                     if app['campaign_id'] == c['id'] and app['contact'] == my_contact:
                                         app['review_link'] = final_link
                                         app['status'] = "리뷰제출완료"
-                                st.success("접수되었습니다.")
+                                st.success("리뷰가 성공적으로 접수되었습니다.")
                 st.markdown('</div>', unsafe_allow_html=True)
 
 else:
@@ -157,8 +169,6 @@ else:
             st.info("등록된 캠페인이 없습니다.")
         else:
             selected_shop = st.selectbox("수정/삭제할 캠페인을 선택하세요", [c['shop'] for c in st.session_state['campaigns']])
-            
-            # 선택한 캠페인의 인덱스 찾기
             idx = next(i for i, c in enumerate(st.session_state['campaigns']) if c['shop'] == selected_shop)
             c = st.session_state['campaigns'][idx]
             
@@ -187,7 +197,7 @@ else:
         if not st.session_state['campaigns']:
             st.info("등록된 캠페인이 없습니다.")
         else:
-            selected_shop = st.selectbox("캠페인 선택", [c['shop'] for c in st.session_state['campaigns']])
+            selected_shop = st.selectbox("보고서를 출력할 캠페인 선택", [c['shop'] for c in st.session_state['campaigns']])
             app_list = [app for app in st.session_state['applications'] if app['shop'] == selected_shop]
             
             if app_list:
@@ -195,3 +205,31 @@ else:
                 st.dataframe(df, use_container_width=True)
             else:
                 st.write("아직 신청자가 없습니다.")
+                
+            st.markdown("---")
+            if st.button("📈 마감 보고서 출력하기"):
+                completed = [app['review_link'] for app in app_list if app['review_link'] != ""]
+                
+                # 프리미엄 리포트 양식 출력 (기존에 설정하신 진단 5포인트 포함)
+                st.markdown(f"""
+                <div style="background-color:#111111; color:#D4AF37; padding:30px; border-radius:15px; border:2px solid #D4AF37;">
+                    <h2 style="text-align:center; color:#D4AF37;">[{selected_shop}] 체험단 마감 리포트</h2>
+                    <hr style="border-color:#D4AF37;">
+                    <h4 style="color:#FFFFFF;">1. 캠페인 요약</h4>
+                    <ul style="color:#FFFFFF;">
+                        <li><b>모집 인원:</b> 목표 {next(c['recruit_count'] for c in st.session_state['campaigns'] if c['shop'] == selected_shop)}명</li>
+                        <li><b>리뷰 완료 건수:</b> 총 {len(completed)}건 달성</li>
+                    </ul>
+                    <h4 style="color:#FFFFFF;">2. 플레이스 이슈 진단 결과 (가이드라인 100% 준수)</h4>
+                    <ul style="color:#FFFFFF;">
+                        <li>✅ <b>리뷰 활동성:</b> 생동감 있는 매장 분위기 스케치 완료</li>
+                        <li>✅ <b>키워드 부재 방지:</b> 타겟 키워드 본문/제목 자연스러운 삽입</li>
+                        <li>✅ <b>사진 빈도:</b> 필수 가이드라인 충족 완료</li>
+                        <li>✅ <b>새소식 업데이트 연계:</b> 플레이스 정보 반영</li>
+                        <li>✅ <b>리뷰 전환율:</b> 정중한 존댓말 및 고객 방문 유도 후킹 문구 적용</li>
+                    </ul>
+                    <h4 style="color:#FFFFFF;">3. 최종 리뷰 링크 리스트</h4>
+                </div>
+                """, unsafe_allow_html=True)
+                for idx, link in enumerate(completed):
+                    st.write(f"**{idx+1}.** {link}")
