@@ -10,25 +10,17 @@ st.set_page_config(page_title="위드멤버 프리미엄 체험단", layout="wid
 st.markdown("""
 <style>
     .stApp { background-color: #F4F7F6; color: #212529; font-family: 'Pretendard', sans-serif; }
-    
-    /* 매장명 타이틀 버튼 세팅 */
     button[kind="tertiary"] { 
-        background: #FFFFFF !important;
-        border: 2px solid #4A90E2 !important;
-        border-radius: 12px !important;
-        padding: 10px 15px !important; 
-        margin-bottom: 15px !important; 
-        font-size: 1.1rem !important; 
-        font-weight: 800 !important; 
-        color: #4A90E2 !important; 
-        justify-content: center !important; 
-        box-shadow: 0 4px 6px rgba(74, 144, 226, 0.1) !important;
-        width: 100% !important;
+        background: #FFFFFF !important; border: 2px solid #4A90E2 !important; border-radius: 12px !important;
+        padding: 10px 15px !important; margin-bottom: 15px !important; font-size: 1.1rem !important; 
+        font-weight: 800 !important; color: #4A90E2 !important; justify-content: center !important; 
+        box-shadow: 0 4px 6px rgba(74, 144, 226, 0.1) !important; width: 100% !important;
     }
     button[kind="tertiary"]:hover { background: #4A90E2 !important; color: #FFFFFF !important; }
-    
     .card-box { background-color: #FFFFFF; padding: 18px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.04); border: 1px solid #EAECEF; }
     .badge-blog { background-color: #03C75A; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
+    .badge-insta { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
+    .badge-yt { background-color: #FF0000; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
     .offer-text { font-size: 0.95rem; color: #4A90E2; font-weight: 800; margin-top: 10px; }
     [data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #EAECEF; }
 </style>
@@ -47,11 +39,9 @@ default_exp_end = default_exp_start + timedelta(weeks=4)
 # ==========================================
 # 🎁 캠페인 상세 팝업창 (폭 확대 버전: Large)
 # ==========================================
-@st.dialog("✨ 캠페인 상세 정보 및 신청", width="large") # [해결] width를 large로 설정하여 한눈에 보이게 수정
+@st.dialog("✨ 캠페인 상세 정보 및 신청", width="large") 
 def open_campaign_modal(c):
     st.markdown(f"## 📍 {c['shop']}")
-    
-    # 상단 정보 레이아웃
     col_info_1, col_info_2 = st.columns([1, 1.2])
     
     with col_info_1:
@@ -83,29 +73,46 @@ def open_campaign_modal(c):
         with st.form(f"apply_form_{c['id']}"):
             fcol1, fcol2 = st.columns(2)
             with fcol1:
-                name = st.text_input("성함")
-                contact = st.text_input("연락처")
+                name = st.text_input("성함 (실명)")
+                contact = st.text_input("연락처 (- 없이)")
+                # [해결 1] 거주 지역 입력 칸 명시적 추가
+                address = st.text_input("거주 지역 (예: 서울 강남구)") 
             with fcol2:
                 blog_url = st.text_input("SNS/블로그 URL")
                 visitors = st.number_input("일 평균 방문자 수", min_value=0)
             if st.form_submit_button("신청 완료"):
-                st.session_state['applications'].append({
-                    "campaign_id": c['id'], "shop": c['shop'], "name": name, 
-                    "contact": contact, "blog_url": blog_url, "visitors": visitors, 
-                    "review_link": "", "status": "신청완료"
-                })
-                st.success("신청이 완료되었습니다!")
+                if name and contact and blog_url:
+                    st.session_state['applications'].append({
+                        "campaign_id": c['id'], "shop": c['shop'], "name": name, 
+                        "contact": contact, "address": address, "blog_url": blog_url, 
+                        "visitors": visitors, "review_link": "", "status": "신청완료"
+                    })
+                    st.success("신청이 완료되었습니다!")
+                else:
+                    st.error("성함, 연락처, URL은 필수 항목입니다.")
 
     with tab_submit:
         with st.form(f"submit_form_{c['id']}"):
-            s_name = st.text_input("신청자 성함 확인")
+            st.write("#### 리뷰 포스팅 제출")
+            fcol3, fcol4 = st.columns(2)
+            with fcol3:
+                s_name = st.text_input("신청자 성함 확인")
+            with fcol4:
+                # [해결 2] 리뷰 제출 시 연락처 입력 칸 명시적 추가
+                s_contact = st.text_input("신청자 연락처 확인 (- 없이)")
             s_link = st.text_input("작성한 리뷰 포스팅 URL")
+            
             if st.form_submit_button("리뷰 제출하기"):
+                submitted = False
                 for app in st.session_state['applications']:
-                    if app['campaign_id'] == c['id'] and app['name'] == s_name:
+                    if app['campaign_id'] == c['id'] and app['name'] == s_name and app['contact'] == s_contact:
                         app['review_link'] = s_link
                         app['status'] = "리뷰제출완료"
-                st.success("리뷰가 정상적으로 제출되었습니다.")
+                        submitted = True
+                if submitted:
+                    st.success("리뷰가 정상적으로 제출되었습니다.")
+                else:
+                    st.error("일치하는 신청 내역이 없습니다. 성함과 연락처를 확인해주세요.")
 
 # ==========================================
 # 🔒 관리자 및 메인 로직
@@ -119,11 +126,13 @@ with st.sidebar:
             if admin_id == "admin" and admin_pw == "1234":
                 st.session_state['admin_logged_in'] = True
                 st.rerun()
+            else:
+                st.error("정보가 일치하지 않습니다.")
     else:
         st.markdown("### 👑 위드멤버 관리자")
         admin_menu = st.radio("메뉴 이동", ["새 캠페인 등록", "캠페인 관리(수정/삭제)", "현황 대시보드"])
         st.write("---")
-        if st.button("로그아웃"):
+        if st.button("로그아웃 (블로거 화면 보기)"):
             st.session_state['admin_logged_in'] = False
             st.rerun()
 
@@ -140,6 +149,7 @@ if not st.session_state['admin_logged_in']:
                     if st.button(c['shop'], key=f"btn_{idx}", type="tertiary", use_container_width=True):
                         open_campaign_modal(c)
                     if c.get('images'): st.image(c['images'][0], use_container_width=True)
+                    else: st.image("https://via.placeholder.com/300x300.png?text=No+Image", use_container_width=True)
                     st.markdown(f'<div class="offer-text">🎁 {c["offer"]}</div>', unsafe_allow_html=True)
                     st.markdown(f'<div class="info-text">🗓️ 마감: {c["recruit_end"].strftime("%m.%d")}</div>', unsafe_allow_html=True)
 
@@ -148,24 +158,31 @@ else:
     if admin_menu == "새 캠페인 등록":
         st.title("🏢 새 캠페인 등록")
         with st.form("reg_form"):
-            shop_name = st.text_input("매장명")
-            offer = st.text_input("제공 내역")
-            uploaded_files = st.file_uploader("이미지 첨부 (최대 4장)", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
-            keywords = st.text_input("필수 키워드")
-            # [해결] 모집 인원 입력 칸 추가
-            recruit_count = st.number_input("블로거 모집 인원", min_value=1, value=10)
-            platform = st.selectbox("플랫폼", ["네이버 블로그", "인스타그램", "유튜브"])
+            col1, col2 = st.columns(2)
+            with col1:
+                shop_name = st.text_input("매장명")
+                offer = st.text_input("제공 내역")
+                uploaded_files = st.file_uploader("이미지 첨부 (최대 4장)", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
+            with col2:
+                keywords = st.text_input("필수 키워드")
+                platform = st.selectbox("플랫폼", ["네이버 블로그", "인스타그램", "유튜브"])
+                recruit_count = st.number_input("블로거 모집 인원", min_value=1, value=10)
+            
             guideline = st.text_area("가이드라인", value="1. 플레이스 5대 진단 포인트 준수\n2. 정중한 존댓말 필수")
+            dcol1, dcol2 = st.columns(2)
+            with dcol1: recruit_dates = st.date_input("모집 기간", [today.date(), default_recruit_end.date()])
+            with dcol2: exp_dates = st.date_input("체험 기간", [default_exp_start.date(), default_exp_end.date()])
             
             if st.form_submit_button("등록 완료"):
-                st.session_state['campaigns'].append({
-                    "id": len(st.session_state['campaigns']), "shop": shop_name, "offer": offer,
-                    "images": uploaded_files[:4], "keywords": keywords, "platform": platform,
-                    "recruit_count": recruit_count, "guideline": guideline,
-                    "recruit_start": today.date(), "recruit_end": default_recruit_end.date(),
-                    "exp_start": default_exp_start.date(), "exp_end": default_exp_end.date()
-                })
-                st.success("성공적으로 등록되었습니다!")
+                if shop_name and len(recruit_dates) == 2 and len(exp_dates) == 2:
+                    st.session_state['campaigns'].append({
+                        "id": len(st.session_state['campaigns']), "shop": shop_name, "offer": offer,
+                        "images": uploaded_files[:4], "keywords": keywords, "platform": platform,
+                        "recruit_count": recruit_count, "guideline": guideline,
+                        "recruit_start": recruit_dates[0], "recruit_end": recruit_dates[1],
+                        "exp_start": exp_dates[0], "exp_end": exp_dates[1], "status": "진행중"
+                    })
+                    st.success("성공적으로 등록되었습니다!")
 
     elif admin_menu == "캠페인 관리(수정/삭제)":
         st.title("🛠️ 캠페인 관리")
@@ -175,7 +192,6 @@ else:
             idx = next(i for i, c in enumerate(st.session_state['campaigns']) if c['shop'] == selected_shop)
             c = st.session_state['campaigns'][idx]
             
-            # [해결] 삭제 및 수정 기능 복구
             if st.button("❌ 이 캠페인 완전 삭제", type="primary"):
                 st.session_state['campaigns'].pop(idx)
                 st.rerun()
@@ -192,34 +208,85 @@ else:
 
     elif admin_menu == "현황 대시보드":
         st.title("📊 현황 대시보드")
-        selected_shop = st.selectbox("캠페인 선택", [c['shop'] for c in st.session_state['campaigns']])
-        apps = [a for a in st.session_state['applications'] if a['shop'] == selected_shop]
-        st.dataframe(pd.DataFrame(apps), use_container_width=True)
-        
-        if st.button("📈 자동 마감 보고서 생성"):
+        if not st.session_state['campaigns']:
+            st.info("등록된 캠페인이 없습니다.")
+        else:
+            selected_shop = st.selectbox("캠페인 선택", [c['shop'] for c in st.session_state['campaigns']])
             current_cam = next(c for c in st.session_state['campaigns'] if c['shop'] == selected_shop)
-            completed = [a['review_link'] for a in apps if a['review_link'] != ""]
-            html_code = f"""
-            <html>
-            <head><script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script></head>
-            <body>
-                <div id="rpt" style="background:#FFF; padding:40px; border:1px solid #EEE; border-radius:15px;">
-                    <h2 style="text-align:center;">[{selected_shop}] 마감 리포트</h2>
-                    <hr style="border:1px solid #4A90E2;">
-                    <p><b>매장명:</b> {selected_shop} | <b>키워드:</b> {current_cam['keywords']}</p>
-                    <p><b>달성:</b> {len(completed)}건 포스팅 완료</p>
-                    <h4>발행 링크</h4>
-                    {"".join([f"<div>{idx+1}. {l}</div>" for idx, l in enumerate(completed)])}
-                </div>
-                <button onclick="saveImg()" style="width:100%; margin-top:20px; padding:15px; background:#4A90E2; color:white; border:none; border-radius:10px; cursor:pointer;">📸 보고서 이미지로 다운로드</button>
-                <script>
-                    function saveImg() {{
-                        html2canvas(document.getElementById('rpt'), {{scale:2}}).then(c => {{
-                            var a = document.createElement('a'); a.download = '{selected_shop}_마감리포트.png'; a.href = c.toDataURL(); a.click();
-                        }});
-                    }}
-                </script>
-            </body>
-            </html>
-            """
-            components.html(html_code, height=700, scrolling=True)
+            apps = [a for a in st.session_state['applications'] if a['shop'] == selected_shop]
+            
+            # 테이블용 데이터 구성
+            if apps:
+                table_data = []
+                for i, app in enumerate(apps):
+                    visitors = int(app.get('visitors', 0))
+                    if visitors >= 500: grade = "고급"
+                    elif visitors >= 100: grade = "중급"
+                    else: grade = "초급"
+                    
+                    submitted_link = app.get('review_link', '')
+                    
+                    table_data.append({
+                        "번호": i + 1, "계정URL": app.get('blog_url', ''), "이름": app.get('name', ''),
+                        "등급": grade, "일 방문": f"{visitors:,}", "연락처": app.get('contact', ''),
+                        "주소": app.get('address', ''), "상태": app.get('status', '신청완료'), 
+                        "제출된 링크": submitted_link if submitted_link else "미제출"
+                    })
+                df = pd.DataFrame(table_data)
+                st.dataframe(df, column_config={"계정URL": st.column_config.LinkColumn("계정URL"), "제출된 링크": st.column_config.LinkColumn("제출된 링크")}, hide_index=True, use_container_width=True)
+            else:
+                st.write("아직 이 캠페인에 신청한 블로거가 없습니다.")
+            
+            # [해결 3] 블로거 선정 완료 체크 기능 신설
+            st.markdown("---")
+            st.subheader("✅ 블로거 선정 관리")
+            pending_apps = [a for a in apps if a['status'] == "신청완료"]
+            
+            if pending_apps:
+                options = [f"{a['name']} ({a['blog_url']})" for a in pending_apps]
+                selected_to_approve = st.multiselect("선정할 블로거를 모두 선택하세요 (다중 선택 가능)", options)
+                
+                if st.button("선정 완료 처리"):
+                    if selected_to_approve:
+                        for app in st.session_state['applications']:
+                            app_display = f"{app['name']} ({app['blog_url']})"
+                            if app['shop'] == selected_shop and app['status'] == "신청완료" and app_display in selected_to_approve:
+                                app['status'] = "선정완료"
+                        st.success("선택한 블로거들이 성공적으로 '선정완료' 상태로 변경되었습니다!")
+                        st.rerun()
+                    else:
+                        st.warning("선정할 블로거를 먼저 선택해주세요.")
+            else:
+                st.info("현재 대기 중인(신청완료) 블로거가 없습니다.")
+            
+            # 마감 리포트 기능 (이전과 동일하게 유지)
+            st.markdown("---")
+            if st.button("📈 자동 마감 보고서 생성"):
+                completed = [a['review_link'] for a in apps if a['review_link'] != ""]
+                html_code = f"""
+                <html>
+                <head><script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script></head>
+                <body>
+                    <div id="rpt" style="background:#FFF; padding:40px; border:1px solid #EEE; border-radius:15px;">
+                        <h2 style="text-align:center;">[{selected_shop}] 마감 리포트</h2>
+                        <hr style="border:1px solid #4A90E2;">
+                        <p><b>매장명:</b> {selected_shop} | <b>키워드:</b> {current_cam['keywords']}</p>
+                        <p><b>결과:</b> 총 {len(completed)}건 포스팅 완료</p>
+                        <div style="background:#F8F9FA; padding:15px; border-radius:10px;">
+                            <b>마감 총평:</b> 본 캠페인은 목표한 키워드 노출과 플레이스 활성화를 위해 가이드라인에 맞춰 정성스럽게 작성되었습니다.
+                        </div>
+                        <h4>발행 링크 취합</h4>
+                        {"".join([f"<div>{idx+1}. {l}</div>" for idx, l in enumerate(completed)])}
+                    </div>
+                    <button onclick="saveImg()" style="width:100%; margin-top:20px; padding:15px; background:#4A90E2; color:white; border:none; border-radius:10px; cursor:pointer;">📸 보고서 이미지로 다운로드</button>
+                    <script>
+                        function saveImg() {{
+                            html2canvas(document.getElementById('rpt'), {{scale:2}}).then(c => {{
+                                var a = document.createElement('a'); a.download = '{selected_shop}_마감리포트.png'; a.href = c.toDataURL(); a.click();
+                            }});
+                        }}
+                    </script>
+                </body>
+                </html>
+                """
+                components.html(html_code, height=700, scrolling=True)
