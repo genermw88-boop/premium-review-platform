@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 # 1. 페이지 설정
 st.set_page_config(page_title="위드멤버 프리미엄 체험단", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS (버튼 숨기기 및 타이틀 클릭 효과)
+# 2. CSS 
 st.markdown("""
 <style>
     .stApp { background-color: #F4F7F6; color: #212529; font-family: 'Pretendard', sans-serif; }
@@ -19,19 +19,8 @@ st.markdown("""
     .offer-text { font-size: 0.95rem; color: #4A90E2; font-weight: 800; margin-top: 5px; margin-bottom: 5px; }
     .info-text { font-size: 0.85rem; color: #666666; margin-bottom: 4px; }
     
-    /* 투명 버튼(매장명)을 타이틀처럼 보이게 만드는 마법의 CSS */
-    button[kind="tertiary"] {
-        justify-content: flex-start !important;
-        padding: 0px !important;
-        margin-top: 10px !important;
-        font-size: 1.25rem !important;
-        font-weight: 900 !important;
-        color: #1A1A1A !important;
-    }
-    button[kind="tertiary"]:hover {
-        color: #4A90E2 !important;
-        background-color: transparent !important;
-    }
+    button[kind="tertiary"] { justify-content: flex-start !important; padding: 0px !important; margin-top: 10px !important; font-size: 1.25rem !important; font-weight: 900 !important; color: #1A1A1A !important; }
+    button[kind="tertiary"]:hover { color: #4A90E2 !important; background-color: transparent !important; }
     
     [data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #EAECEF; }
 </style>
@@ -139,7 +128,6 @@ if not st.session_state['admin_logged_in']:
     # ----------------------------------------
     # [블로거 화면]
     # ----------------------------------------
-    # 스마트폰으로 음식 사진을 찍는 블로거 감성의 배너 이미지 강제 적용!
     st.markdown("""
         <div style="width:100%; padding: 50px 20px; background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=1200&auto=format&fit=crop') center/cover; border-radius:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; margin-bottom:40px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
             <h1 style="color:#FFFFFF; margin:0; font-size:2.8rem; font-weight:900; letter-spacing: -1px;">PREMIUM CAMPAIGN</h1>
@@ -155,21 +143,17 @@ if not st.session_state['admin_logged_in']:
             with cols[idx % 4]: 
                 st.markdown('<div class="card-box">', unsafe_allow_html=True)
                 
-                # 이미지 노출 영역
                 if c['image']: st.image(c['image'], use_container_width=True)
                 else: st.markdown('<div style="height:200px; background:#F1F3F5; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#ADB5BD; font-weight:bold;">이미지 준비중</div>', unsafe_allow_html=True)
                 
-                # 플랫폼 뱃지
                 badge_class = "badge-blog"
                 if "인스타" in c['platform']: badge_class = "badge-insta"
                 elif "유튜브" in c['platform']: badge_class = "badge-yt"
                 st.markdown(f'<div style="margin-top:12px;"><span class="{badge_class}">{c["platform"]}</span></div>', unsafe_allow_html=True)
                 
-                # [핵심 변경] 투박한 버튼을 없애고 매장명 자체를 투명한 버튼으로 만들었습니다!
                 if st.button(c['shop'], key=f"title_btn_{c['id']}", type="tertiary", use_container_width=True):
                     open_campaign_modal(c)
                 
-                # 아래 정보 텍스트들
                 st.markdown(f'<div class="offer-text">🎁 {c["offer"]}</div>', unsafe_allow_html=True)
                 st.markdown(f'<div class="info-text">🗓️ 마감: {c["recruit_end"].strftime("%m.%d")}</div>', unsafe_allow_html=True)
                 st.markdown(f'<div class="info-text" style="color:#adb5bd; font-size:0.7rem;">👆 매장명을 클릭하면 신청창이 열립니다.</div>', unsafe_allow_html=True)
@@ -222,9 +206,28 @@ else:
         else:
             selected_shop = st.selectbox("수정/삭제할 캠페인 선택", [c['shop'] for c in st.session_state['campaigns']])
             idx = next(i for i, c in enumerate(st.session_state['campaigns']) if c['shop'] == selected_shop)
-            if st.button("❌ 완전 삭제", type="primary"):
-                st.session_state['campaigns'].pop(idx)
-                st.rerun()
+            c = st.session_state['campaigns'][idx]
+            
+            col_del1, col_del2 = st.columns([4, 1])
+            with col_del2:
+                if st.button("❌ 완전 삭제", type="primary"):
+                    st.session_state['campaigns'].pop(idx)
+                    st.rerun()
+
+            # [복구 완료] 수정 폼 영역
+            with st.form("edit_form"):
+                st.write("### 캠페인 내용 수정")
+                new_offer = st.text_input("제공 내역 수정", value=c['offer'])
+                new_keywords = st.text_input("키워드 수정", value=c['keywords'])
+                new_recruit_count = st.number_input("모집 인원 수정", min_value=1, value=int(c['recruit_count']))
+                new_guideline = st.text_area("가이드라인 수정", value=c.get('guideline', ''))
+                
+                if st.form_submit_button("수정 내용 저장"):
+                    st.session_state['campaigns'][idx]['offer'] = new_offer
+                    st.session_state['campaigns'][idx]['keywords'] = new_keywords
+                    st.session_state['campaigns'][idx]['recruit_count'] = new_recruit_count
+                    st.session_state['campaigns'][idx]['guideline'] = new_guideline
+                    st.success("수정 사항이 성공적으로 저장되었습니다.")
 
     elif admin_menu == "현황 대시보드":
         st.title("📊 캠페인 신청자 현황 대시보드")
@@ -246,16 +249,10 @@ else:
                     eval_status = "평가완료" if submitted_link != "" else "대기중"
                     
                     table_data.append({
-                        "번호": i + 1,
-                        "계정URL": app.get('blog_url', ''),
-                        "이름": app.get('name', ''),
-                        "등급": grade,
-                        "일 방문": f"{visitors:,}",
-                        "연락처": app.get('contact', ''),
-                        "주소": app.get('address', ''),
-                        "링크주소": link_status,
-                        "첨부자료": "자료없음",
-                        "평가": eval_status
+                        "번호": i + 1, "계정URL": app.get('blog_url', ''), "이름": app.get('name', ''),
+                        "등급": grade, "일 방문": f"{visitors:,}", "연락처": app.get('contact', ''),
+                        "주소": app.get('address', ''), "링크주소": link_status,
+                        "첨부자료": "자료없음", "평가": eval_status
                     })
                 
                 df = pd.DataFrame(table_data)
@@ -265,3 +262,31 @@ else:
                     hide_index=True, use_container_width=True
                 )
             else: st.write("아직 이 캠페인에 신청한 블로거가 없습니다.")
+            
+            # [복구 완료] 마감 보고서 출력 기능 (블랙 & 골드 프리미엄 테마)
+            st.markdown("---")
+            if st.button("📈 마감 보고서 출력하기"):
+                completed = [app['review_link'] for app in app_list if app['review_link'] != ""]
+                
+                st.markdown(f"""
+                <div style="background-color:#111111; color:#D4AF37; padding:30px; border-radius:15px; border:2px solid #D4AF37; margin-top:20px;">
+                    <h2 style="text-align:center; color:#D4AF37;">[{selected_shop}] 체험단 마감 리포트</h2>
+                    <hr style="border-color:#D4AF37;">
+                    <h4 style="color:#FFFFFF;">1. 캠페인 요약</h4>
+                    <ul style="color:#FFFFFF;">
+                        <li><b>모집 인원:</b> 목표 {next(cam['recruit_count'] for cam in st.session_state['campaigns'] if cam['shop'] == selected_shop)}명</li>
+                        <li><b>리뷰 완료 건수:</b> 총 {len(completed)}건 달성</li>
+                    </ul>
+                    <h4 style="color:#FFFFFF;">2. 플레이스 이슈 진단 결과</h4>
+                    <ul style="color:#FFFFFF;">
+                        <li>✅ <b>리뷰 활동성:</b> 매장 분위기 스케치 완료</li>
+                        <li>✅ <b>키워드 부재 방지:</b> 타겟 키워드 본문/제목 삽입</li>
+                        <li>✅ <b>사진 빈도:</b> 가이드라인(사진 15장 이상/숏폼 15초 이상) 충족</li>
+                        <li>✅ <b>새소식 업데이트 연계:</b> 플레이스 정보 반영 완료</li>
+                        <li>✅ <b>리뷰 전환율:</b> 정중한 존댓말 및 후킹 문구 적용 확인</li>
+                    </ul>
+                    <h4 style="color:#FFFFFF;">3. 최종 리뷰 링크 리스트</h4>
+                </div>
+                """, unsafe_allow_html=True)
+                for idx, link in enumerate(completed): 
+                    st.write(f"**{idx+1}.** {link}")
