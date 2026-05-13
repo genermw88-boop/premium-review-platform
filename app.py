@@ -45,23 +45,37 @@ def display_b64_image(b64_str):
 # 1. 페이지 설정
 st.set_page_config(page_title="위드멤버 프리미엄 체험단", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS
+# 2. CSS (전문 체험단 사이트 UI 스타일로 완벽 개편)
 st.markdown("""
 <style>
-    .stApp { background-color: #F4F7F6; color: #212529; font-family: 'Pretendard', sans-serif; }
+    .stApp { background-color: #FFFFFF; color: #212529; font-family: 'Pretendard', sans-serif; }
+    
+    /* 제목 버튼을 전문 사이트의 텍스트 링크처럼 변경 */
     button[kind="tertiary"] { 
-        background: #FFFFFF !important; border: 2px solid #4A90E2 !important; border-radius: 12px !important;
-        padding: 10px 15px !important; margin-bottom: 10px !important; font-size: 1.1rem !important; 
-        font-weight: 800 !important; color: #4A90E2 !important; justify-content: center !important; 
-        box-shadow: 0 4px 6px rgba(74, 144, 226, 0.1) !important; width: 100% !important;
+        background: transparent !important; border: none !important; border-radius: 0 !important;
+        padding: 0 !important; margin-top: 8px !important; margin-bottom: 2px !important; 
+        font-size: 1.1rem !important; font-weight: 700 !important; color: #111111 !important; 
+        justify-content: flex-start !important; box-shadow: none !important; width: 100% !important;
+        text-align: left !important;
     }
-    button[kind="tertiary"]:hover { background: #4A90E2 !important; color: #FFFFFF !important; }
-    .card-box { background-color: #FFFFFF; padding: 18px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.04); border: 1px solid #EAECEF; }
-    .badge-blog { background-color: #03C75A; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
-    .badge-insta { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
-    .badge-yt { background-color: #FF0000; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
-    .offer-text { font-size: 0.95rem; color: #4A90E2; font-weight: 800; margin-top: 10px; }
-    .info-text { font-size: 0.85rem; color: #666666; margin-bottom: 4px; }
+    button[kind="tertiary"]:hover { background: transparent !important; color: #4A90E2 !important; text-decoration: underline; }
+    
+    /* 카드 디자인: 그림자를 없애고 심플하게 구성 */
+    .card-box { padding: 0px; margin-bottom: 30px; transition: 0.2s; }
+    .card-box:hover { transform: translateY(-3px); }
+    
+    /* 뱃지 및 메타 정보 디자인 */
+    .badge-blog { background-color: #03C75A; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+    .badge-insta { background: linear-gradient(45deg, #f09433 0%, #dc2743 50%, #bc1888 100%); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+    .badge-yt { background-color: #FF0000; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+    .d-day-text { font-size: 0.8rem; font-weight: 700; color: #555; margin-left: 6px; }
+    .offer-text { font-size: 0.85rem; color: #666; margin-top: 2px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
+    .app-count-text { font-size: 0.8rem; color: #333; margin-top: 6px; font-weight: 600; }
+    .app-count-text span { color: #E74C3C; }
+    
+    /* 최상단 헤더 보더라인 */
+    .top-header { border-bottom: 1px solid #EAECEF; padding-bottom: 15px; margin-bottom: 25px; }
+    
     [data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #EAECEF; }
 </style>
 """, unsafe_allow_html=True)
@@ -74,13 +88,13 @@ if 'data_loaded' not in st.session_state:
     st.session_state['admin_logged_in'] = False
     st.session_state['data_loaded'] = True
 
-today = datetime.now()
-default_recruit_end = today + timedelta(days=7)
+today_date = datetime.now().date()
+default_recruit_end = today_date + timedelta(days=7)
 default_exp_start = default_recruit_end + timedelta(days=1)
 default_exp_end = default_exp_start + timedelta(weeks=4)
 
 # ==========================================
-# 🎁 캠페인 상세 팝업창 (Large)
+# 🎁 캠페인 상세 팝업창 
 # ==========================================
 @st.dialog("✨ 캠페인 상세 정보 및 신청", width="large") 
 def open_campaign_modal(c):
@@ -105,11 +119,8 @@ def open_campaign_modal(c):
         exp_end_val = c['exp_end']
         
         if extend_days > 0:
-            if isinstance(exp_end_val, str):
-                base_end_date = datetime.strptime(exp_end_val, "%Y-%m-%d").date()
-            else:
-                base_end_date = exp_end_val
-            
+            if isinstance(exp_end_val, str): base_end_date = datetime.strptime(exp_end_val, "%Y-%m-%d").date()
+            else: base_end_date = exp_end_val
             final_end_date = base_end_date + timedelta(days=extend_days)
             exp_period_display = f"{exp_start_val} ~ {exp_end_val} <span style='color:#E74C3C; font-weight:900;'>(🚨 {extend_days}일 연장됨 👉 최종 마감: {final_end_date.strftime('%Y-%m-%d')})</span>"
         else:
@@ -197,41 +208,76 @@ with st.sidebar:
             st.rerun()
 
 # ==========================================
-# 📱 메인 화면 분기
+# 📱 메인 화면 분기 (전문 사이트 폼 적용)
 # ==========================================
 if not st.session_state['admin_logged_in']:
-    # [수정] 배너 하단의 "위드멤버 프리미엄 체험단" 문구를 완전히 제거했습니다.
-    st.markdown('<div style="width:100%; padding: 50px 20px; background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url(\'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=1200&auto=format&fit=crop\') center/cover; border-radius:20px; text-align:center; margin-bottom:20px;"><h1 style="color:white; margin:0;">PREMIUM CAMPAIGN</h1></div>', unsafe_allow_html=True)
     
-    col_search1, col_search2 = st.columns(2)
-    with col_search1: search_region = st.text_input("📍 지역 검색", placeholder="예: 강남, 부천")
-    with col_search2: search_shop = st.text_input("🏪 매장명 검색", placeholder="예: 매장 상호명 입력")
-    st.markdown("<br>", unsafe_allow_html=True)
+    # [12.jpg 기반] 상단 전문 웹사이트 헤더 & 검색바 레이아웃 구성
+    st.markdown("<div class='top-header'>", unsafe_allow_html=True)
+    header_col1, header_col2, header_col3 = st.columns([1, 2, 1])
+    with header_col1:
+        st.markdown("<h2 style='margin:0; padding:0; color:#1A1A1A;'>🟧 위드멤버</h2><p style='margin:0; font-size:0.75rem; color:#888;'>PREMIUM CAMPAIGN</p>", unsafe_allow_html=True)
+    with header_col2:
+        search_query = st.text_input("🔍 캠페인 지역 또는 매장명 검색", placeholder="예: 강남 맛집, 부천, 홍대", label_visibility="collapsed")
+    with header_col3:
+        st.markdown("<div style='text-align:right; font-size:0.85rem; margin-top:15px;'><a href='#' style='color:#666; text-decoration:none;'>로그인</a> | <a href='#' style='color:#666; text-decoration:none;'>회원가입</a></div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<h3 style='margin-bottom:20px; border-left:4px solid #F39C12; padding-left:10px;'>진행중인 캠페인</h3>", unsafe_allow_html=True)
     
+    # 검색 필터링 로직
     filtered_campaigns = []
     for c in st.session_state['campaigns']:
-        match_region = search_region.lower() in c.get('region', '').lower() if search_region else True
-        match_shop = search_shop.lower() in c['shop'].lower() if search_shop else True
-        if match_region and match_shop: filtered_campaigns.append(c)
+        target_text = c['shop'] + " " + c.get('region', '')
+        if not search_query or search_query.lower() in target_text.lower():
+            filtered_campaigns.append(c)
     
     if not filtered_campaigns: 
-        st.info("검색 조건에 맞는 캠페인이 없습니다.")
+        st.info("조건에 맞는 캠페인이 없습니다. 다른 키워드로 검색해보세요.")
     else:
+        # [12.jpg 기반] 캠페인 카드 리스트 렌더링 (4열 그리드 유지)
         cols = st.columns(4) 
         for idx, c in enumerate(filtered_campaigns):
             with cols[idx % 4]: 
-                with st.container(border=True):
-                    if st.button(c['shop'], key=f"btn_{c['id']}", type="tertiary", use_container_width=True):
-                        open_campaign_modal(c)
-                    
-                    if c.get('images'): display_b64_image(c['images'][0])
-                    else: st.image("https://via.placeholder.com/300x300.png?text=No+Image", use_container_width=True)
-                    
-                    st.markdown(f'<div class="info-text" style="margin-top:10px; font-weight:bold;">📍 {c.get("region", "전국")}</div>', unsafe_allow_html=True)
-                    st.markdown(f'<div class="offer-text" style="margin-top:2px;">🎁 {c["offer"]}</div>', unsafe_allow_html=True)
-                    st.markdown(f'<div class="info-text">🗓️ 마감: {c["recruit_end"].strftime("%m.%d")}</div>', unsafe_allow_html=True)
+                st.markdown("<div class='card-box'>", unsafe_allow_html=True)
+                
+                # 1. 썸네일 이미지
+                if c.get('images'): display_b64_image(c['images'][0])
+                else: st.markdown('<div style="height:180px; background:#F1F3F5; display:flex; align-items:center; justify-content:center; color:#ADB5BD;">No Image</div>', unsafe_allow_html=True)
+                
+                # 2. 뱃지 & D-Day 계산
+                badge_class = "badge-blog"
+                if "인스타" in c['platform']: badge_class = "badge-insta"
+                elif "유튜브" in c['platform']: badge_class = "badge-yt"
+                
+                recruit_end_date = c['recruit_end']
+                if isinstance(recruit_end_date, str):
+                    recruit_end_date = datetime.strptime(recruit_end_date, "%Y-%m-%d").date()
+                days_left = (recruit_end_date - today_date).days
+                
+                if days_left > 0: d_day_str = f"{days_left}일 남음"
+                elif days_left == 0: d_day_str = "오늘 마감"
+                else: d_day_str = "마감됨"
+                
+                st.markdown(f'<div style="margin-top:8px;"><span class="{badge_class}">{c["platform"]}</span><span class="d-day-text">{d_day_str}</span></div>', unsafe_allow_html=True)
+                
+                # 3. 타이틀 (투명한 텍스트 형태의 버튼) - [지역] 매장명 형식
+                region_text = f"[{c.get('region', '전국').split()[0]}]" if c.get('region') else ""
+                title_display = f"{region_text} {c['shop']}"
+                if st.button(title_display, key=f"btn_{c['id']}", type="tertiary", use_container_width=True):
+                    open_campaign_modal(c)
+                
+                # 4. 혜택 서브 텍스트
+                st.markdown(f'<div class="offer-text">{c["offer"]}</div>', unsafe_allow_html=True)
+                
+                # 5. 신청자 수 카운팅
+                app_count = len([a for a in st.session_state['applications'] if a['campaign_id'] == c['id']])
+                st.markdown(f'<div class="app-count-text">신청 <span>{app_count}</span> / 모집 {c["recruit_count"]}</div>', unsafe_allow_html=True)
+                
+                st.markdown("</div>", unsafe_allow_html=True)
 
 else:
+    # [관리자 전용 화면] (이전과 동일하게 모든 기능 유지)
     if admin_menu == "새 캠페인 등록":
         st.title("🏢 새 캠페인 등록")
         with st.form("reg_form"):
@@ -261,8 +307,8 @@ else:
             guideline = st.text_area("📝 리뷰 가이드라인", value=default_guideline, height=300)
             
             dcol1, dcol2, dcol3 = st.columns(3)
-            with dcol1: recruit_dates = st.date_input("모집 기간", [today.date(), default_recruit_end.date()])
-            with dcol2: exp_dates = st.date_input("체험 기간", [default_exp_start.date(), default_exp_end.date()])
+            with dcol1: recruit_dates = st.date_input("모집 기간", [today_date, default_recruit_end])
+            with dcol2: exp_dates = st.date_input("체험 기간", [default_exp_start, default_exp_end])
             with dcol3: exp_extend_days = st.number_input("체험기간 연장 설정 (일 단위)", min_value=0, value=0, help="필요시 연장할 일수를 입력하세요.")
             
             if st.form_submit_button("등록 완료"):
@@ -313,7 +359,7 @@ else:
                         edit_recruit = st.number_input("모집 인원 수정", value=int(c['recruit_count']))
                         
                         st.write("---")
-                        edit_extend_days = st.number_input("⏳ 체험기간 연장 (일 단위)", min_value=0, value=int(c.get('exp_extend_days', 0)), help="숫자를 올리면 블로거 화면에 빨간색으로 연장 마감일이 자동 표시됩니다.")
+                        edit_extend_days = st.number_input("⏳ 체험기간 연장 (일 단위)", min_value=0, value=int(c.get('exp_extend_days', 0)))
                         st.write("---")
                         
                         edit_guide = st.text_area("가이드라인 수정", value=c['guideline'], height=300)
