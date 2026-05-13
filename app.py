@@ -58,11 +58,33 @@ def display_b64_image(b64_str):
 # 1. 페이지 설정
 st.set_page_config(page_title="리뷰어스 프리미엄 체험단", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. 기본 CSS 세팅
+# 2. 기본 CSS 세팅 (프리미엄 테두리 및 그림자 효과 대폭 강화)
 st.markdown("""
 <style>
     .stApp { background-color: #F8F9FA; color: #212529; font-family: 'Pretendard', sans-serif; }
     
+    /* 🔴 [업데이트] 메인 캠페인 카드 테두리 & 호버 애니메이션 고급화 */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: 20px !important;
+        border: 1px solid #EBEFEF !important;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.04) !important;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        background-color: #FFFFFF !important;
+        padding: 15px 12px !important;
+        margin-bottom: 20px !important;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+        border-color: #4A90E2 !important;
+        box-shadow: 0 16px 32px rgba(74, 144, 226, 0.12) !important;
+        transform: translateY(-6px) !important;
+    }
+    
+    /* 🔴 [업데이트] 썸네일 이미지 모서리를 카드 테두리와 일치하게 둥글게 깎기 */
+    [data-testid="stImage"] img {
+        border-radius: 14px !important;
+        object-fit: cover !important;
+    }
+
     button[kind="tertiary"] { 
         background: transparent !important; border: none !important; border-radius: 0 !important;
         padding: 0 !important; margin-top: 14px !important; margin-bottom: 8px !important; 
@@ -73,10 +95,7 @@ st.markdown("""
     }
     button[kind="tertiary"]:hover { color: #2980B9 !important; background: transparent !important; }
     
-    .card-box { padding: 0px; margin-bottom: 30px; transition: 0.2s; }
-    .card-box:hover { transform: translateY(-3px); }
-    
-    /* 🎨 카테고리별 고유 색상 뱃지 */
+    /* 뱃지 디자인 */
     .badge-exp { background-color: #8E44AD; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-right: 4px; box-shadow: 0 2px 4px rgba(142,68,173,0.2); }
     .badge-clip { background-color: #00C73C; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-right: 4px; box-shadow: 0 2px 4px rgba(0,199,60,0.2); }
     .badge-press { background-color: #34495E; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-right: 4px; box-shadow: 0 2px 4px rgba(52,73,94,0.2); }
@@ -231,16 +250,13 @@ if not st.session_state['admin_logged_in']:
     with col_search1: search_region = st.text_input("📍 지역 검색", placeholder="예: 강남, 부천")
     with col_search2: search_shop = st.text_input("🏪 매장명 검색", placeholder="예: 매장 상호명 입력")
     
-    # 📌 [앱 스타일 탭 버튼 UI] 동그란 라디오 버튼을 예쁜 탭 버튼으로 렌더링
     selected_category = st.radio("카테고리 선택", ["전체", "체험단", "네이버 클립", "기자단"], horizontal=True, label_visibility="collapsed")
     
-    # 🎨 선택된 탭에 따라 메인 컬러 동적 변경 (CSS 주입)
     color_map = {"전체": "#4A90E2", "체험단": "#8E44AD", "네이버 클립": "#00C73C", "기자단": "#34495E"}
     bg_color = color_map.get(selected_category, "#4A90E2")
     
     st.markdown(f"""
     <style>
-        /* 기본 라디오 버튼 숨기고 탭 버튼 형태로 만들기 */
         div.row-widget.stRadio > div {{ 
             display: flex; flex-direction: row; gap: 8px; justify-content: center; 
             background: #EAECEF; padding: 6px; border-radius: 12px; display: inline-flex; margin: 5px auto 30px auto; width: 100%; max-width: 600px;
@@ -248,10 +264,8 @@ if not st.session_state['admin_logged_in']:
         div.row-widget.stRadio > div > label {{
             background-color: transparent; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: 0.2s; margin: 0; flex: 1; text-align: center;
         }}
-        div.row-widget.stRadio > div > label > div:first-child {{ display: none; /* 동그라미 제거 */ }}
+        div.row-widget.stRadio > div > label > div:first-child {{ display: none; }}
         div.row-widget.stRadio > div > label p {{ font-weight: 800; font-size: 1.05rem; margin: 0; color: #666; text-align: center; width: 100%; }}
-        
-        /* 선택된 탭에 컬러 입히기 */
         div.row-widget.stRadio > div > label[data-checked="true"] {{ background-color: {bg_color} !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
         div.row-widget.stRadio > div > label[data-checked="true"] p {{ color: white !important; }}
     </style>
@@ -275,7 +289,7 @@ if not st.session_state['admin_logged_in']:
                 with st.container(border=True):
                     # 1. 썸네일
                     if c.get('images'): display_b64_image(c['images'][0])
-                    else: st.markdown('<div style="height:200px; background:#F1F3F5; display:flex; align-items:center; justify-content:center; color:#ADB5BD;">No Image</div>', unsafe_allow_html=True)
+                    else: st.markdown('<div style="height:200px; background:#F1F3F5; display:flex; align-items:center; justify-content:center; color:#ADB5BD; border-radius:14px;">No Image</div>', unsafe_allow_html=True)
                     
                     # 2. 카테고리 뱃지 & D-Day
                     cat = c.get('category', '체험단')
@@ -316,7 +330,6 @@ else:
                 offer = st.text_input("제공 내역")
                 uploaded_files = st.file_uploader("이미지 첨부 (최대 4장)", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
             with col2:
-                # [업데이트] 세부 플랫폼은 날리고 캠페인 유형만 명확하게 제공
                 category = st.selectbox("📌 캠페인 유형 (메인 탭 분류용)", ["체험단", "네이버 클립", "기자단"])
                 keywords = st.text_input("필수 키워드")
                 recruit_count = st.number_input("블로거 모집 인원", min_value=1, value=10)
@@ -466,44 +479,4 @@ else:
                         completed = [a['review_link'] for a in apps if a['review_link'] != ""]
                         
                         comments_pool = [
-                            f"대표님, 안녕하십니까. 리뷰어스 마케팅팀입니다.<br>이번 <b>[{selected_shop}]</b> 캠페인이 성공적으로 마감되었습니다.<br><br>요청하신 메인 키워드 <b>'{current_cam['keywords']}'</b>(을)를 타겟으로 하여 총 <b>{len(completed)}명</b>의 검증된 프리미엄 리뷰어가 포스팅을 완료했습니다. 단순 조회수 증가를 넘어, 네이버 플레이스 5대 진단 포인트를 철저히 준수하고 잠재 고객의 방문을 유도하는 정중한 존댓말과 후킹 문구를 적용하여 실제 매장 유입을 극대화할 수 있도록 세팅을 완료하였습니다.",
-                            f"안녕하세요 대표님, 리뷰어스 마케팅팀입니다.<br><b>[{selected_shop}]</b>의 체험단 프로젝트가 성황리에 마무리되어 최종 결과를 보고드립니다.<br><br>전달 주신 핵심 키워드 <b>'{current_cam['keywords']}'</b>에 맞춰 총 <b>{len(completed)}건</b>의 고품질 리뷰 발행이 완료되었습니다. 모든 포스팅은 단순 나열식 리뷰를 지양하고, 매장의 매력을 최대한 어필하는 활동성 있는 사진과 후킹 멘트로 구성되었습니다. 이를 통해 스마트플레이스로의 자연스러운 검색 유입 및 전환율 상승이 강력하게 기대됩니다.",
-                            f"리뷰어스 마케팅팀에서 <b>[{selected_shop}]</b> 캠페인 최종 마감 현황을 안내해 드립니다.<br><br>총 <b>{len(completed)}명</b>의 우수 블로거들이 <b>'{current_cam['keywords']}'</b> 키워드를 중심으로 매장의 장점을 생생하게 포스팅하였습니다. 특히 당사의 까다로운 리뷰 가이드라인(존댓말 필수 사용, 새소식 연계 등)이 100% 반영되어, 검색 유저들에게 높은 신뢰감을 주고 실제 오프라인 방문으로 즉시 이어질 수 있는 탄탄한 온라인 마케팅 기반이 마련되었습니다."
-                        ]
-                        eval_comment = random.choice(comments_pool)
-
-                        html_code = f"""
-                        <html>
-                        <head><script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script></head>
-                        <body style="font-family: 'Malgun Gothic', sans-serif;">
-                            <div id="rpt" style="background:#FFF; padding:40px; border:1px solid #EAECEF; border-radius:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
-                                <h2 style="color:#1A1A1A; border-bottom: 2px solid #4A90E2; padding-bottom: 15px; margin-bottom: 25px;">📊 [{selected_shop}] 마케팅 결과 보고서</h2>
-                                <p style="font-size: 1.05rem; color: #333;"><b>수신:</b> {selected_shop} 대표님<br><b>발신:</b> 리뷰어스(ReviewUs) 마케팅팀</p>
-                                <div style="background:#F8F9FA; padding:25px; border-radius:10px; margin: 25px 0; line-height: 1.8; font-size: 0.95rem; color:#212529;">
-                                    {eval_comment}
-                                </div>
-                                <h4 style="color:#2C3E50; margin-bottom: 15px; border-left: 4px solid #4A90E2; padding-left: 10px;">🔗 최종 발행된 리뷰 포스팅 링크</h4>
-                                <div style="background:#FFF; border: 1px solid #EAECEF; padding: 20px; border-radius: 10px; word-break: break-all; line-height: 2.0; font-size: 0.95rem;">
-                        """
-                        
-                        if len(completed) > 0:
-                            for idx, link in enumerate(completed):
-                                html_code += f"<div style='margin-bottom: 8px;'><b>{idx+1}.</b> <a href='{link}' target='_blank' style='color:#4A90E2; text-decoration:underline;'>{link}</a></div>"
-                        else: html_code += "<div style='color:#868E96;'>아직 제출된 리뷰 포스팅이 없습니다.</div>"
-                            
-                        html_code += """
-                                </div>
-                            </div>
-                            <button onclick="saveImg()" style="width:100%; margin-top:20px; padding:15px; background:#4A90E2; color:white; border:none; border-radius:10px; cursor:pointer; font-weight:bold; font-size: 1.05rem;">📸 보고서 이미지로 즉시 다운로드</button>
-                            <script>
-                                function saveImg() {
-                                    html2canvas(document.getElementById('rpt'), {scale:2, useCORS:true}).then(c => {
-                                        var a = document.createElement('a'); a.download = '리뷰어스_{selected_shop}_마감보고서.png'; a.href = c.toDataURL('image/png'); a.click();
-                                    });
-                                }
-                            </script>
-                        </body>
-                        </html>
-                        """
-                        components.html(html_code, height=900, scrolling=True)
-            else: st.info("👆 위 검색창에 대시보드를 확인할 매장명을 입력해주세요.")
+                            f
