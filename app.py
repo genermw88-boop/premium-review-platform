@@ -8,7 +8,7 @@ import base64
 import random
 
 # ==========================================
-# 💾 자동 저장 데이터베이스 세팅 (구버전 데이터 복구 로직 포함)
+# 💾 자동 저장 데이터베이스 세팅 
 # ==========================================
 DATA_FILE = "reviewus_db.json"
 OLD_DATA_FILE = "withmember_db.json"
@@ -58,44 +58,40 @@ def display_b64_image(b64_str):
 # 1. 페이지 설정
 st.set_page_config(page_title="리뷰어스 프리미엄 체험단", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. 기본 CSS 세팅 (프리미엄 테두리 및 그림자 효과 대폭 강화)
+# 2. 기본 CSS 세팅
 st.markdown("""
 <style>
     .stApp { background-color: #F8F9FA; color: #212529; font-family: 'Pretendard', sans-serif; }
     
-    /* 🔴 [업데이트] 메인 캠페인 카드 테두리 & 호버 애니메이션 고급화 */
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        border-radius: 20px !important;
-        border: 1px solid #EBEFEF !important;
-        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.04) !important;
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
-        background-color: #FFFFFF !important;
-        padding: 15px 12px !important;
-        margin-bottom: 20px !important;
+        border-radius: 20px !important; border: 1px solid #EBEFEF !important;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.04) !important; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        background-color: #FFFFFF !important; padding: 15px 12px !important; margin-bottom: 20px !important;
     }
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-        border-color: #4A90E2 !important;
-        box-shadow: 0 16px 32px rgba(74, 144, 226, 0.12) !important;
-        transform: translateY(-6px) !important;
+        border-color: #4A90E2 !important; box-shadow: 0 16px 32px rgba(74, 144, 226, 0.12) !important; transform: translateY(-6px) !important;
     }
-    
-    /* 🔴 [업데이트] 썸네일 이미지 모서리를 카드 테두리와 일치하게 둥글게 깎기 */
-    [data-testid="stImage"] img {
-        border-radius: 14px !important;
-        object-fit: cover !important;
-    }
+    [data-testid="stImage"] img { border-radius: 14px !important; object-fit: cover !important; }
 
+    /* 🔴 [완벽 해결] 매장명 타이틀 강제 굵기 & 딥 네이비 색상 적용 */
     button[kind="tertiary"] { 
         background: transparent !important; border: none !important; border-radius: 0 !important;
         padding: 0 !important; margin-top: 14px !important; margin-bottom: 8px !important; 
-        font-size: 1.35rem !important; font-weight: 900 !important; color: #111111 !important; 
         justify-content: flex-start !important; text-align: left !important; box-shadow: none !important; 
-        letter-spacing: -0.5px !important; line-height: 1.3 !important; white-space: normal !important;
+    }
+    button[kind="tertiary"] p, button[kind="tertiary"] span, button[kind="tertiary"] div {
+        font-size: 1.35rem !important; 
+        font-weight: 900 !important; 
+        color: #1A237E !important; /* 고급스러운 딥 네이비 지정 */
+        letter-spacing: -0.5px !important; 
+        line-height: 1.3 !important; 
+        white-space: normal !important;
         transition: color 0.2s ease-in-out !important;
     }
-    button[kind="tertiary"]:hover { color: #2980B9 !important; background: transparent !important; }
+    button[kind="tertiary"]:hover p, button[kind="tertiary"]:hover span, button[kind="tertiary"]:hover div { 
+        color: #E74C3C !important; /* 마우스 오버 시 레드 포인트 */
+    }
     
-    /* 뱃지 디자인 */
     .badge-exp { background-color: #8E44AD; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-right: 4px; box-shadow: 0 2px 4px rgba(142,68,173,0.2); }
     .badge-clip { background-color: #00C73C; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-right: 4px; box-shadow: 0 2px 4px rgba(0,199,60,0.2); }
     .badge-press { background-color: #34495E; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-right: 4px; box-shadow: 0 2px 4px rgba(52,73,94,0.2); }
@@ -123,7 +119,7 @@ default_exp_start = default_recruit_end + timedelta(days=1)
 default_exp_end = default_exp_start + timedelta(weeks=4)
 
 # ==========================================
-# 🎁 캠페인 상세 팝업창 
+# 🎁 캠페인 상세 팝업창 (내용 디자인 완전 개편)
 # ==========================================
 @st.dialog("✨ 리뷰어스 상세 정보 및 신청", width="large") 
 def open_campaign_modal(c):
@@ -141,7 +137,7 @@ def open_campaign_modal(c):
             st.image("https://via.placeholder.com/300x300.png?text=No+Image", use_container_width=True)
             
     with col_info_2:
-        place_link_html = f"<a href='{c.get('place_link', '#')}' target='_blank' style='color:#4A90E2; text-decoration:none; font-weight:bold;'>👉 플레이스 바로가기</a>" if c.get('place_link') else "등록된 링크가 없습니다."
+        place_link_html = f"<a href='{c.get('place_link', '#')}' target='_blank' style='color:#2980B9; text-decoration:underline; font-weight:900;'>👉 플레이스 바로가기</a>" if c.get('place_link') else "<span style='color:#999;'>등록된 링크가 없습니다.</span>"
         
         extend_days = c.get('exp_extend_days', 0)
         exp_start_val = c['exp_start']
@@ -151,20 +147,25 @@ def open_campaign_modal(c):
             if isinstance(exp_end_val, str): base_end_date = datetime.strptime(exp_end_val, "%Y-%m-%d").date()
             else: base_end_date = exp_end_val
             final_end_date = base_end_date + timedelta(days=extend_days)
-            exp_period_display = f"{exp_start_val} ~ {exp_end_val} <span style='color:#E74C3C; font-weight:900;'>(🚨 {extend_days}일 연장됨 👉 최종 마감: {final_end_date.strftime('%Y-%m-%d')})</span>"
+            exp_period_display = f"{exp_start_val} ~ {exp_end_val} <span style='color:#E74C3C; font-weight:900;'>(🚨 {extend_days}일 연장됨 👉 {final_end_date.strftime('%Y-%m-%d')})</span>"
         else:
             exp_period_display = f"{exp_start_val} ~ {exp_end_val}"
             
-        st.markdown(f"""
-        **📍 지역:** {c.get('region', '전국')}  
-        **🏷️ 분류:** {c.get('category', '체험단')}
-        **🔗 매장 링크:** {place_link_html}  
-        **🎁 제공 내역:** {c['offer']}  
-        **🔑 필수 키워드:** {c['keywords']}  
-        **🗓️ 모집 기간:** {c['recruit_start']} ~ {c['recruit_end']}  
-        **🏃 체험 기간:** {exp_period_display}  
-        **👥 모집 인원:** {c['recruit_count']}명  
-        """, unsafe_allow_html=True)
+        # 🔴 [완벽 해결] 밋밋한 텍스트를 크고 굵은 HTML 리스트로 예쁘게 정렬 
+        details_html = f"""
+        <div style="font-size: 1.05rem; line-height: 2.1; color: #2C3E50; padding: 10px 0;">
+            <div style="margin-bottom: 4px;"><b>📍 지 역 :</b> <span style="font-weight:700; color:#111;">{c.get('region', '전국')}</span></div>
+            <div style="margin-bottom: 4px;"><b>🏷️ 분 류 :</b> <span style="font-weight:800; color:#8E44AD;">{c.get('category', '체험단')}</span></div>
+            <div style="margin-bottom: 4px;"><b>🔗 매장 링크 :</b> {place_link_html}</div>
+            <div style="margin-bottom: 4px;"><b>🎁 제공 내역 :</b> <span style="font-weight:900; color:#E74C3C; font-size:1.1rem;">{c['offer']}</span></div>
+            <div style="margin-bottom: 4px;"><b>🔑 필수 키워드 :</b> <span style="font-weight:700; color:#111;">{c['keywords']}</span></div>
+            <div style="margin-bottom: 4px;"><b>🗓️ 모집 기간 :</b> <span style="font-weight:700; color:#111;">{c['recruit_start']} ~ {c['recruit_end']}</span></div>
+            <div style="margin-bottom: 4px;"><b>🏃 체험 기간 :</b> <span style="font-weight:700; color:#111;">{exp_period_display}</span></div>
+            <div style="margin-bottom: 4px;"><b>👥 모집 인원 :</b> <span style="font-weight:900; color:#2980B9;">{c['recruit_count']}명</span></div>
+        </div>
+        """
+        st.markdown(details_html, unsafe_allow_html=True)
+        
         st.markdown("---")
         st.markdown("### 📝 리뷰 가이드라인")
         st.info(c.get('guideline', ''))
