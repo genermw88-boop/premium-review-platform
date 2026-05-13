@@ -2,47 +2,20 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 
-# 1. 페이지 기본 설정
+# 1. 페이지 설정
 st.set_page_config(page_title="위드멤버 프리미엄 체험단", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. 깔끔한 화이트 테마 CSS 적용
+# 2. CSS (화이트 톤 & 썸네일 갤러리 디자인)
 st.markdown("""
 <style>
-    /* 전체 배경 화이트&라이트그레이 톤 */
-    .stApp {
-        background-color: #F8F9FA;
-        color: #212529;
-    }
-    /* 버튼 디자인 (깔끔한 블루) */
-    div.stButton > button {
-        background-color: #4A90E2;
-        color: white;
-        border-radius: 8px;
-        font-weight: bold;
-        border: none;
-        padding: 0.5rem 1rem;
-    }
-    div.stButton > button:hover {
-        background-color: #357ABD;
-        color: white;
-    }
-    /* 카드(박스) 디자인 */
-    .card-box {
-        background-color: #FFFFFF;
-        padding: 25px;
-        border-radius: 15px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-        margin-bottom: 25px;
-        border: 1px solid #E9ECEF;
-    }
-    h1, h2, h3 { color: #212529 !important; font-weight: 800; }
-    p, span, label, li { color: #495057 !important; }
-    
-    /* 사이드바 디자인 */
-    [data-testid="stSidebar"] {
-        background-color: #FFFFFF;
-        border-right: 1px solid #E9ECEF;
-    }
+    .stApp { background-color: #F8F9FA; color: #212529; }
+    .card-box { background-color: #FFFFFF; padding: 15px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #E9ECEF; }
+    div.stButton > button { background-color: #4A90E2; color: white; border-radius: 6px; font-weight: bold; width: 100%; border: none; }
+    div.stButton > button:hover { background-color: #357ABD; color: white; }
+    .shop-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 5px; color: #212529; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+    .offer-text { font-size: 0.9rem; color: #E74C3C; font-weight: bold; margin-bottom: 5px; }
+    .info-text { font-size: 0.8rem; color: #6C757D; margin-bottom: 2px; }
+    [data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #E9ECEF; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -60,7 +33,7 @@ default_exp_start = default_recruit_end + timedelta(days=1)
 default_exp_end = default_exp_start + timedelta(weeks=4)
 
 # ==========================================
-# 🔒 왼쪽 사이드바 (관리자 전용 구역)
+# 🔒 왼쪽 사이드바 (관리자 구역)
 # ==========================================
 with st.sidebar:
     if not st.session_state['admin_logged_in']:
@@ -75,78 +48,76 @@ with st.sidebar:
                 st.error("정보가 일치하지 않습니다.")
     else:
         st.markdown("### 👑 위드멤버 관리자")
-        admin_menu = st.radio("메뉴 이동", ["현황 대시보드", "새 캠페인 등록"])
+        admin_menu = st.radio("메뉴 이동", ["새 캠페인 등록", "캠페인 관리(수정/삭제)", "현황 대시보드"])
         st.write("---")
-        if st.button("로그아웃"):
+        if st.button("로그아웃 (블로거 화면 보기)"):
             st.session_state['admin_logged_in'] = False
             st.rerun()
 
 # ==========================================
-# 📱 메인 화면 분기 (로그인 여부에 따라 다르게 표시)
+# 📱 메인 화면 분기
 # ==========================================
 if not st.session_state['admin_logged_in']:
     # ----------------------------------------
-    # [일반 방문자(블로거) 화면]
+    # [블로거 화면 - 3.jpg 스타일 바둑판 배열]
     # ----------------------------------------
-    st.title("✨ 위드멤버 프리미엄 체험단")
-    st.write("퀄리티 높은 리뷰로 로컬 매장과 함께 성장할 리뷰어님들을 모십니다.")
+    st.image("https://via.placeholder.com/1200x200/F1F3F5/4A90E2?text=Premium+Review+Platform+Open", use_container_width=True) # 상단 배너 예시
+    st.markdown("### ✨ 진행 중인 프리미엄 캠페인")
+    st.write("로컬 비즈니스 성장을 함께할 상위 10% 리뷰어를 모십니다.")
     st.markdown("---")
 
     if not st.session_state['campaigns']:
-        st.info("현재 준비 중인 캠페인이 없습니다. 곧 새로운 캠페인으로 찾아뵙겠습니다!")
+        st.info("현재 준비 중인 캠페인이 없습니다.")
     else:
-        for c in st.session_state['campaigns']:
-            st.markdown('<div class="card-box">', unsafe_allow_html=True)
-            col_img, col_info = st.columns([1, 2.5])
-            
-            with col_img:
+        # 4열 바둑판 그리드 생성
+        cols = st.columns(4) 
+        for idx, c in enumerate(st.session_state['campaigns']):
+            with cols[idx % 4]: # 4개마다 줄바꿈
+                st.markdown('<div class="card-box">', unsafe_allow_html=True)
+                
+                # 이미지 노출
                 if c['image'] is not None:
                     st.image(c['image'], use_container_width=True)
                 else:
                     st.image("https://via.placeholder.com/300x300.png?text=No+Image", use_container_width=True)
-            
-            with col_info:
-                st.markdown(f"### 📍 {c['shop']} ({c['status']})")
-                st.write(f"**🎁 제공 내역:** {c['offer']}")
-                st.write(f"**🔑 필수 키워드:** {c['keywords']}")
-                st.write(f"**🗓️ 모집 기간:** {c['recruit_start']} ~ {c['recruit_end']} (총 {c['recruit_count']}명)")
-                st.write(f"**🏃 체험 기간:** {c['exp_start']} ~ {c['exp_end']}")
                 
-                col_btn1, col_btn2 = st.columns(2)
-                with col_btn1:
-                    with st.popover("👉 체험단 신청하기", use_container_width=True):
+                # 정보 텍스트 (줄바꿈 없이 깔끔하게)
+                st.markdown(f'<div class="shop-title">{c["shop"]}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="offer-text">{c["offer"]}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="info-text">모집: {c["recruit_start"].strftime("%m.%d")} ~ {c["recruit_end"].strftime("%m.%d")}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="info-text">인원: {c["recruit_count"]}명 ({c["platform"]})</div>', unsafe_allow_html=True)
+                
+                st.write("") # 여백
+                
+                # 팝업 형태의 신청 버튼
+                with st.popover("자세히 보기 및 신청", use_container_width=True):
+                    st.markdown(f"#### 📍 {c['shop']}")
+                    st.write(f"**키워드:** {c['keywords']}")
+                    st.write(f"**체험기간:** {c['exp_start']} ~ {c['exp_end']}")
+                    st.divider()
+                    
+                    # 탭 분리: 신청하기 / 리뷰제출
+                    tab_apply, tab_submit = st.tabs(["신청서 작성", "리뷰 제출 (선정자)"])
+                    with tab_apply:
                         with st.form(f"apply_{c['id']}"):
-                            st.write("#### 📝 신청서 작성")
-                            blog_url = st.text_input("운영 중인 블로그/SNS URL")
+                            blog_url = st.text_input("운영 채널 URL")
                             contact = st.text_input("연락처 (010-0000-0000)")
                             if st.form_submit_button("신청 완료"):
-                                if blog_url and contact:
-                                    st.session_state['applications'].append({
-                                        "campaign_id": c['id'], "shop": c['shop'], 
-                                        "blog_url": blog_url, "contact": contact,
-                                        "review_link": "", "status": "신청완료"
-                                    })
-                                    st.success("신청이 완료되었습니다!")
-                                else:
-                                    st.error("모든 항목을 입력해주세요.")
-                with col_btn2:
-                    with st.popover("✅ 리뷰 제출하기", use_container_width=True):
-                        with st.form(f"review_{c['id']}"):
-                            st.write("#### 🔗 작성 완료된 리뷰 제출")
-                            my_contact = st.text_input("신청 시 연락처")
+                                st.session_state['applications'].append({
+                                    "campaign_id": c['id'], "shop": c['shop'], "blog_url": blog_url, "contact": contact, "review_link": "", "status": "신청완료"
+                                })
+                                st.success("신청되었습니다.")
+                    with tab_submit:
+                        with st.form(f"submit_{c['id']}"):
+                            my_contact = st.text_input("신청 연락처 확인")
                             final_link = st.text_input("리뷰 URL")
                             if st.form_submit_button("제출 완료"):
-                                submitted = False
                                 for app in st.session_state['applications']:
                                     if app['campaign_id'] == c['id'] and app['contact'] == my_contact:
                                         app['review_link'] = final_link
                                         app['status'] = "리뷰제출완료"
-                                        submitted = True
-                                if submitted:
-                                    st.success("리뷰 URL이 접수되었습니다.")
-                                else:
-                                    st.error("신청 내역을 찾을 수 없습니다.")
-            st.markdown('</div>', unsafe_allow_html=True)
+                                st.success("접수되었습니다.")
+                st.markdown('</div>', unsafe_allow_html=True)
 
 else:
     # ----------------------------------------
@@ -154,24 +125,20 @@ else:
     # ----------------------------------------
     if admin_menu == "새 캠페인 등록":
         st.title("🏢 새 캠페인 등록")
-        st.markdown('<div class="card-box">', unsafe_allow_html=True)
         with st.form("campaign_form"):
             col1, col2 = st.columns(2)
             with col1:
                 shop_name = st.text_input("매장명")
-                offer = st.text_input("제공 내역 (예: 5만원 상당 식사권)")
-                uploaded_file = st.file_uploader("대표 이미지 첨부", type=['png', 'jpg', 'jpeg'])
+                offer = st.text_input("제공 내역 (예: 5만원 식사권)")
+                uploaded_file = st.file_uploader("대표 이미지 (정사각형 권장)", type=['png', 'jpg', 'jpeg'])
             with col2:
                 keywords = st.text_input("필수 노출 키워드")
                 platform = st.selectbox("메인 타겟 플랫폼", ["네이버 블로그", "인스타그램 릴스", "유튜브 쇼츠"])
                 recruit_count = st.number_input("모집 인원", min_value=1, value=10)
-            
             st.write("---")
             col3, col4 = st.columns(2)
-            with col3:
-                recruit_dates = st.date_input("모집 기간 (기본 7일)", [today.date(), default_recruit_end.date()])
-            with col4:
-                exp_dates = st.date_input("체험 기간 (기본 3~4주)", [default_exp_start.date(), default_exp_end.date()])
+            with col3: recruit_dates = st.date_input("모집 기간", [today.date(), default_recruit_end.date()])
+            with col4: exp_dates = st.date_input("체험 기간", [default_exp_start.date(), default_exp_end.date()])
             
             if st.form_submit_button("캠페인 등록하기"):
                 if shop_name and len(recruit_dates) == 2 and len(exp_dates) == 2:
@@ -182,61 +149,49 @@ else:
                         "recruit_start": recruit_dates[0], "recruit_end": recruit_dates[1],
                         "exp_start": exp_dates[0], "exp_end": exp_dates[1], "status": "진행중"
                     })
-                    st.success(f"[{shop_name}] 캠페인이 등록되었습니다!")
-        st.markdown('</div>', unsafe_allow_html=True)
+                    st.success("등록 완료!")
 
-    elif admin_menu == "현황 대시보드":
-        st.title("📊 관리자 대시보드")
+    elif admin_menu == "캠페인 관리(수정/삭제)":
+        st.title("🛠️ 캠페인 관리 (수정 및 삭제)")
         if not st.session_state['campaigns']:
             st.info("등록된 캠페인이 없습니다.")
         else:
-            selected_shop = st.selectbox("관리할 캠페인 선택", [c['shop'] for c in st.session_state['campaigns']])
-            current_campaign = next(c for c in st.session_state['campaigns'] if c['shop'] == selected_shop)
+            selected_shop = st.selectbox("수정/삭제할 캠페인을 선택하세요", [c['shop'] for c in st.session_state['campaigns']])
             
-            st.markdown('<div class="card-box">', unsafe_allow_html=True)
-            st.subheader("🗓️ 체험 기간 연장")
-            col_ext1, col_ext2 = st.columns([3, 1])
-            with col_ext1:
-                new_exp_end = st.date_input("새로운 체험 종료일 선택", current_campaign['exp_end'])
-            with col_ext2:
-                st.write("") 
-                st.write("")
-                if st.button("기간 연장 적용"):
-                    current_campaign['exp_end'] = new_exp_end
-                    st.success("연장되었습니다.")
-            st.markdown('</div>', unsafe_allow_html=True)
+            # 선택한 캠페인의 인덱스 찾기
+            idx = next(i for i, c in enumerate(st.session_state['campaigns']) if c['shop'] == selected_shop)
+            c = st.session_state['campaigns'][idx]
+            
+            st.markdown("---")
+            col_del1, col_del2 = st.columns([4, 1])
+            with col_del2:
+                if st.button("❌ 이 캠페인 완전 삭제", type="primary"):
+                    st.session_state['campaigns'].pop(idx)
+                    st.success(f"{selected_shop} 캠페인이 삭제되었습니다.")
+                    st.rerun()
 
-            st.markdown('<div class="card-box">', unsafe_allow_html=True)
-            st.subheader("👥 신청 및 리뷰 제출 현황")
+            st.write("### 캠페인 내용 수정")
+            with st.form("edit_form"):
+                new_offer = st.text_input("제공 내역 수정", value=c['offer'])
+                new_keywords = st.text_input("키워드 수정", value=c['keywords'])
+                new_recruit_count = st.number_input("모집 인원 수정", min_value=1, value=int(c['recruit_count']))
+                
+                if st.form_submit_button("수정 내용 저장"):
+                    st.session_state['campaigns'][idx]['offer'] = new_offer
+                    st.session_state['campaigns'][idx]['keywords'] = new_keywords
+                    st.session_state['campaigns'][idx]['recruit_count'] = new_recruit_count
+                    st.success("수정 사항이 성공적으로 저장되었습니다.")
+
+    elif admin_menu == "현황 대시보드":
+        st.title("📊 현황 대시보드 및 리포트")
+        if not st.session_state['campaigns']:
+            st.info("등록된 캠페인이 없습니다.")
+        else:
+            selected_shop = st.selectbox("캠페인 선택", [c['shop'] for c in st.session_state['campaigns']])
             app_list = [app for app in st.session_state['applications'] if app['shop'] == selected_shop]
+            
             if app_list:
                 df = pd.DataFrame(app_list)[['contact', 'blog_url', 'status', 'review_link']]
-                df.columns = ['연락처', '블로그 URL', '상태', '제출된 링크']
                 st.dataframe(df, use_container_width=True)
             else:
                 st.write("아직 신청자가 없습니다.")
-            st.markdown('</div>', unsafe_allow_html=True)
-
-            st.markdown('<div class="card-box">', unsafe_allow_html=True)
-            st.subheader("📑 마감 보고서 자동 생성")
-            if st.button("보고서 출력하기"):
-                completed = [app['review_link'] for app in app_list if app['review_link'] != ""]
-                st.markdown(f"""
-                <div style="background-color:#F8F9FA; padding:20px; border-radius:10px; border:1px solid #E9ECEF;">
-                    <h3 style="text-align:center; color:#212529;">[{current_campaign['shop']}] 체험단 마감 리포트</h3>
-                    <hr>
-                    <p><b>■ 모집 및 완료:</b> 총 {current_campaign['recruit_count']}명 모집 / {len(completed)}건 완료</p>
-                    <p><b>■ 플레이스 이슈 진단 5포인트 달성율 (100%)</b></p>
-                    <ul>
-                        <li>리뷰 활동성 (매장 분위기 어필)</li>
-                        <li>키워드 부재 방지 (제목/본문 삽입)</li>
-                        <li>사진 빈도 (가이드라인 충족)</li>
-                        <li>새소식 업데이트 연계 반영</li>
-                        <li>리뷰 전환율 (정중한 존댓말 및 후킹 문구)</li>
-                    </ul>
-                    <p><b>■ 제출된 리뷰 링크</b></p>
-                </div>
-                """, unsafe_allow_html=True)
-                for idx, link in enumerate(completed):
-                    st.write(f"{idx+1}. {link}")
-            st.markdown('</div>', unsafe_allow_html=True)
