@@ -8,27 +8,44 @@ import base64
 import random
 
 # ==========================================
-# 💾 자동 저장 데이터베이스 세팅 (기존 데이터 완벽 연동)
+# 💾 자동 저장 데이터베이스 세팅 (구버전 데이터 완벽 복구 로직 포함)
 # ==========================================
 DATA_FILE = "reviewus_db.json"
-OLD_DATA_FILE = "withmember_db.json" # 이전 버전의 데이터를 불러오기 위한 장치
+OLD_DATA_FILE = "withmember_db.json" # 구버전 데이터 파일
 
 def load_data():
-    file_to_load = DATA_FILE if os.path.exists(DATA_FILE) else (OLD_DATA_FILE if os.path.exists(OLD_DATA_FILE) else None)
-    if file_to_load:
+    camps, apps = [], []
+    
+    # 1. 신규 DB 로드 시도
+    if os.path.exists(DATA_FILE):
         try:
-            with open(file_to_load, "r", encoding="utf-8") as f:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                for c in data.get('campaigns', []):
-                    c['recruit_start'] = datetime.strptime(c['recruit_start'], "%Y-%m-%d").date()
-                    c['recruit_end'] = datetime.strptime(c['recruit_end'], "%Y-%m-%d").date()
-                    c['exp_start'] = datetime.strptime(c['exp_start'], "%Y-%m-%d").date()
-                    c['exp_end'] = datetime.strptime(c['exp_end'], "%Y-%m-%d").date()
-                    # 이전 데이터에 카테고리가 없다면 기본값 '체험단'으로 지정
-                    c['category'] = c.get('category', '체험단')
-                return data.get('campaigns', []), data.get('applications', [])
+                camps = data.get('campaigns', [])
+                apps = data.get('applications', [])
         except: pass
-    return [], []
+        
+    # 2. 만약 신규 DB가 비어있다면, 구버전 DB에서 생존 데이터 강제 구출!
+    if not camps and os.path.exists(OLD_DATA_FILE):
+        try:
+            with open(OLD_DATA_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                camps = data.get('campaigns', [])
+                apps = data.get('applications', [])
+        except: pass
+        
+    # 3. 데이터 날짜 및 필수 카테고리값 포맷팅
+    for c in camps:
+        if isinstance(c.get('recruit_start'), str): c['recruit_start'] = datetime.strptime(c['recruit_start'], "%Y-%m-%d").date()
+        if isinstance(c.get('recruit_end'), str): c['recruit_end'] = datetime.strptime(c['recruit_end'], "%Y-%m-%d").date()
+        if isinstance(c.get('exp_start'), str): c['exp_start'] = datetime.strptime(c['exp_start'], "%Y-%m-%d").date()
+        if isinstance(c.get('exp_end'), str): c['exp_end'] = datetime.strptime(c['exp_end'], "%Y-%m-%d").date()
+        
+        # 기존에 카테고리 없이 등록된 캠페인은 모두 '체험단'으로 자동 기본 세팅
+        if 'category' not in c:
+            c['category'] = '체험단'
+            
+    return camps, apps
 
 def save_data(campaigns, applications):
     camps_to_save = []
@@ -48,7 +65,7 @@ def display_b64_image(b64_str):
 # 1. 페이지 설정
 st.set_page_config(page_title="리뷰어스 프리미엄 체험단", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS (최고급 카드형 UI 및 세련된 타이틀 버튼 적용)
+# 2. CSS (최고급 디자인 및 라디오 버튼 탭 스타일링)
 st.markdown("""
 <style>
     .stApp { background-color: #F8F9FA; color: #212529; font-family: 'Pretendard', sans-serif; }
@@ -66,7 +83,7 @@ st.markdown("""
     .card-box { padding: 0px; margin-bottom: 30px; transition: 0.2s; }
     .card-box:hover { transform: translateY(-3px); }
     
-    /* 뱃지 디자인 추가 (네이버 클립, 기자단 등) */
+    /* 뱃지 디자인 */
     .badge-exp { background-color: #8E44AD; color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-right: 4px; }
     .badge-clip { background-color: #00C73C; color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-right: 4px; }
     .badge-press { background-color: #34495E; color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-right: 4px; }
@@ -79,20 +96,24 @@ st.markdown("""
     .offer-text { font-size: 0.95rem; color: #2980B9; font-weight: 800; margin-top: 5px; }
     .app-count-text { font-size: 0.85rem; color: #555; margin-top: 12px; font-weight: 500; border-top: 1px dashed #EAECEF; padding-top: 10px; }
     
-    [data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #EAECEF; }
+    /* 카테고리 탭(라디오 버튼)을 깔끔하게 가운데 정렬 */
+    div.row-widget.stRadio > div { display: flex; flex-direction: row; gap: 20px; justify-content: center; margin-bottom: 25px; margin-top: 10px; }
     
-    /* 카테고리 라디오 버튼 스타일링 */
-    div.row-widget.stRadio > div { flex-direction: row; gap: 15px; justify-content: center; margin-bottom: 30px; }
+    [data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #EAECEF; }
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 데이터 로딩
+# 3. 데이터 로딩 적용
 if 'data_loaded' not in st.session_state:
     camps, apps = load_data()
     st.session_state['campaigns'] = camps
     st.session_state['applications'] = apps
     st.session_state['admin_logged_in'] = False
     st.session_state['data_loaded'] = True
+    
+    # 첫 로딩 후 신규 DB 형식으로 덮어써서 복구 데이터 확정 저장
+    if camps:
+        save_data(camps, apps)
 
 today_date = datetime.now().date()
 default_recruit_end = today_date + timedelta(days=7)
@@ -228,23 +249,23 @@ if not st.session_state['admin_logged_in']:
     with col_search1: search_region = st.text_input("📍 지역 검색", placeholder="예: 강남, 부천")
     with col_search2: search_shop = st.text_input("🏪 매장명 검색", placeholder="예: 매장 상호명 입력")
     
-    st.markdown("<br>", unsafe_allow_html=True)
+    # 📌 [업데이트] 메인 화면 카테고리 노출 탭 (전체, 체험단, 네이버 클립, 기자단)
+    selected_category = st.radio("📌 캠페인 모아보기", ["전체", "체험단", "네이버 클립", "기자단"], horizontal=True, label_visibility="collapsed")
     
-    # 📌 [핵심] 캠페인 카테고리 필터
-    selected_category = st.radio("캠페인 분류", ["전체", "체험단", "네이버 클립", "기자단"], horizontal=True, label_visibility="collapsed")
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<hr style='border:1px solid #EAECEF; margin-top:10px; margin-bottom:30px;'>", unsafe_allow_html=True)
     
     filtered_campaigns = []
     for c in st.session_state['campaigns']:
         match_region = search_region.lower() in c.get('region', '').lower() if search_region else True
         match_shop = search_shop.lower() in c['shop'].lower() if search_shop else True
-        match_category = (selected_category == "전체") or (c.get('category', '체험단') == selected_category)
+        # 카테고리가 일치하거나 '전체'일 경우에만 노출
+        match_category = True if selected_category == "전체" else c.get('category', '체험단') == selected_category
         
         if match_region and match_shop and match_category:
             filtered_campaigns.append(c)
     
     if not filtered_campaigns: 
-        st.info("검색 조건에 맞는 캠페인이 없습니다.")
+        st.info("조건에 맞는 캠페인이 없습니다. 다른 탭이나 검색어를 확인해보세요.")
     else:
         cols = st.columns(4) 
         for idx, c in enumerate(filtered_campaigns):
@@ -272,7 +293,7 @@ if not st.session_state['admin_logged_in']:
                     
                     st.markdown(f'<div style="margin-top:12px;"><span class="{cat_badge_class}">{cat}</span> <span class="{plat_badge_class}">{plat}</span><span class="d-day-badge">{d_day_str}</span></div>', unsafe_allow_html=True)
                     
-                    # 3. 타이틀 (에디토리얼 스타일 적용)
+                    # 3. 타이틀
                     region_text = f"[{c.get('region', '전국').split()[0]}]" if c.get('region') else ""
                     title_display = f"{region_text} {c['shop']}"
                     if st.button(title_display, key=f"btn_{c['id']}", type="tertiary", use_container_width=True):
@@ -297,9 +318,9 @@ else:
                 offer = st.text_input("제공 내역")
                 uploaded_files = st.file_uploader("이미지 첨부 (최대 4장)", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
             with col2:
-                # [핵심] 캠페인 카테고리 선택 추가
-                category = st.selectbox("캠페인 유형", ["체험단", "네이버 클립", "기자단"])
-                platform = st.selectbox("플랫폼", ["네이버 블로그", "인스타그램", "유튜브"])
+                # [업데이트] 메인 탭 구분을 위한 '캠페인 메인 분류' 명확하게 추가
+                category = st.selectbox("📌 캠페인 메인 분류 (메인 화면 탭 구분용)", ["체험단", "네이버 클립", "기자단"])
+                platform = st.selectbox("📱 세부 노출 플랫폼", ["네이버 블로그", "인스타그램", "유튜브"])
                 keywords = st.text_input("필수 키워드")
                 recruit_count = st.number_input("블로거 모집 인원", min_value=1, value=10)
             
@@ -364,7 +385,8 @@ else:
                             edit_region = st.text_input("지역 수정", value=c.get('region', ''))
                         with ecol2:
                             current_cat = c.get('category', '체험단')
-                            edit_category = st.selectbox("캠페인 유형 수정", ["체험단", "네이버 클립", "기자단"], index=["체험단", "네이버 클립", "기자단"].index(current_cat) if current_cat in ["체험단", "네이버 클립", "기자단"] else 0)
+                            cat_options = ["체험단", "네이버 클립", "기자단"]
+                            edit_category = st.selectbox("📌 메인 분류 수정", cat_options, index=cat_options.index(current_cat) if current_cat in cat_options else 0)
 
                         edit_place_link = st.text_input("매장 플레이스 링크 수정", value=c.get('place_link', ''))
                         edit_offer = st.text_input("제공 내역 수정", value=c['offer'])
