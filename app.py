@@ -73,13 +73,12 @@ st.markdown("""
     }
     [data-testid="stImage"] img { border-radius: 14px !important; object-fit: cover !important; }
 
-    /* 🔴 [복구 및 고급화] 이미지 위로 올라가는 매장명 박스(창) 디자인 */
     button[kind="tertiary"] { 
         background: #FFFFFF !important; 
-        border: 2px solid #1A237E !important; /* 딥 네이비 테두리 */
+        border: 2px solid #1A237E !important; 
         border-radius: 12px !important;
         padding: 10px 10px !important; 
-        margin-bottom: 15px !important; /* 이미지와의 간격 */
+        margin-bottom: 15px !important; 
         justify-content: center !important; 
         text-align: center !important; 
         box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important; 
@@ -95,14 +94,13 @@ st.markdown("""
         transition: color 0.2s ease-in-out !important;
     }
     button[kind="tertiary"]:hover { 
-        background: #1A237E !important; /* 마우스 올리면 배경이 네이비로 */
+        background: #1A237E !important; 
         border-color: #1A237E !important;
     }
     button[kind="tertiary"]:hover p, button[kind="tertiary"]:hover span, button[kind="tertiary"]:hover div { 
-        color: #FFFFFF !important; /* 마우스 올리면 글씨는 화이트로 */
+        color: #FFFFFF !important; 
     }
     
-    /* 뱃지 및 기타 정보 */
     .badge-exp { background-color: #8E44AD; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-right: 4px; box-shadow: 0 2px 4px rgba(142,68,173,0.2); }
     .badge-clip { background-color: #00C73C; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-right: 4px; box-shadow: 0 2px 4px rgba(0,199,60,0.2); }
     .badge-press { background-color: #34495E; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; margin-right: 4px; box-shadow: 0 2px 4px rgba(52,73,94,0.2); }
@@ -115,7 +113,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 데이터 로딩 
+# 3. 데이터 로딩
 if 'data_loaded' not in st.session_state:
     camps, apps = load_data()
     st.session_state['campaigns'] = camps
@@ -250,9 +248,10 @@ with st.sidebar:
 # ==========================================
 if not st.session_state['admin_logged_in']:
     
+    # 🔴 [완벽 해결] translate="no"와 class="notranslate"를 적용하여 자동번역 100% 원천 차단
     st.markdown("""
         <div style="width:100%; padding: 60px 20px; background: linear-gradient(rgba(17, 17, 17, 0.7), rgba(17, 17, 17, 0.9)), url('https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=1200&auto=format&fit=crop') center/cover; border-radius:20px; text-align:center; margin-bottom:30px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
-            <h1 style="color:#FFFFFF; margin:0; font-size:3.2rem; font-weight:900; letter-spacing: -1px;">REVIEW US</h1>
+            <h1 translate="no" class="notranslate" style="color:#FFFFFF; margin:0; font-size:3.2rem; font-weight:900; letter-spacing: -1px;">REVIEW US</h1>
             <p style="color:#D4AF37; margin-top:10px; font-size:1.15rem; font-weight:bold;">상위 10% 리뷰어를 위한 프리미엄 매칭 플랫폼</p>
         </div>
     """, unsafe_allow_html=True)
@@ -298,7 +297,7 @@ if not st.session_state['admin_logged_in']:
         for idx, c in enumerate(filtered_campaigns):
             with cols[idx % 4]: 
                 with st.container(border=True):
-                    # 1. 매장명 박스 (창) - 썸네일 이미지 상단 배치
+                    # 1. 매장명 박스 (창)
                     region_text = f"[{c.get('region', '전국').split()[0]}]" if c.get('region') else ""
                     title_display = f"{region_text} {c['shop']}"
                     if st.button(title_display, key=f"btn_{c['id']}", type="tertiary", use_container_width=True):
@@ -308,7 +307,7 @@ if not st.session_state['admin_logged_in']:
                     if c.get('images'): display_b64_image(c['images'][0])
                     else: st.markdown('<div style="height:200px; background:#F1F3F5; display:flex; align-items:center; justify-content:center; color:#ADB5BD; border-radius:14px;">No Image</div>', unsafe_allow_html=True)
                     
-                    # 3. 카테고리 뱃지 & D-Day (이미지 바로 하단)
+                    # 3. 카테고리 뱃지 & D-Day 
                     cat = c.get('category', '체험단')
                     if cat == "체험단": cat_badge_class = "badge-exp"
                     elif cat == "네이버 클립": cat_badge_class = "badge-clip"
