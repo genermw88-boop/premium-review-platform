@@ -45,7 +45,7 @@ def display_b64_image(b64_str):
 # 1. 페이지 설정
 st.set_page_config(page_title="위드멤버 프리미엄 체험단", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS (디자인 세팅)
+# 2. CSS
 st.markdown("""
 <style>
     .stApp { background-color: #F4F7F6; color: #212529; font-family: 'Pretendard', sans-serif; }
@@ -98,16 +98,31 @@ def open_campaign_modal(c):
             st.image("https://via.placeholder.com/300x300.png?text=No+Image", use_container_width=True)
             
     with col_info_2:
-        # [업데이트] 플레이스 링크 클릭 시 새 창 열림 세팅
         place_link_html = f"<a href='{c.get('place_link', '#')}' target='_blank' style='color:#4A90E2; text-decoration:none; font-weight:bold;'>👉 플레이스 바로가기</a>" if c.get('place_link') else "등록된 링크가 없습니다."
         
+        # [연장 기능 추가] 연장일수를 계산하여 팝업창에 직관적으로 보여줌
+        extend_days = c.get('exp_extend_days', 0)
+        exp_start_val = c['exp_start']
+        exp_end_val = c['exp_end']
+        
+        if extend_days > 0:
+            if isinstance(exp_end_val, str):
+                base_end_date = datetime.strptime(exp_end_val, "%Y-%m-%d").date()
+            else:
+                base_end_date = exp_end_val
+            
+            final_end_date = base_end_date + timedelta(days=extend_days)
+            exp_period_display = f"{exp_start_val} ~ {exp_end_val} <span style='color:#E74C3C; font-weight:900;'>(🚨 {extend_days}일 연장됨 👉 최종 마감: {final_end_date.strftime('%Y-%m-%d')})</span>"
+        else:
+            exp_period_display = f"{exp_start_val} ~ {exp_end_val}"
+            
         st.markdown(f"""
         **📍 지역:** {c.get('region', '전국')}  
         **🔗 매장 링크:** {place_link_html}  
         **🎁 제공 내역:** {c['offer']}  
         **🔑 필수 키워드:** {c['keywords']}  
         **🗓️ 모집 기간:** {c['recruit_start']} ~ {c['recruit_end']}  
-        **🏃 체험 기간:** {c['exp_start']} ~ {c['exp_end']}  
+        **🏃 체험 기간:** {exp_period_display}  
         **👥 모집 인원:** {c['recruit_count']}명  
         """, unsafe_allow_html=True)
         st.markdown("---")
@@ -224,7 +239,6 @@ else:
             with col1:
                 shop_name = st.text_input("매장명")
                 region = st.text_input("지역 (예: 서울 강남구)") 
-                # [업데이트] 플레이스 링크 입력란 추가
                 place_link = st.text_input("매장 플레이스 링크 (URL)")
                 offer = st.text_input("제공 내역")
                 uploaded_files = st.file_uploader("이미지 첨부 (최대 4장)", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
@@ -246,9 +260,11 @@ else:
             
             guideline = st.text_area("📝 리뷰 가이드라인", value=default_guideline, height=300)
             
-            dcol1, dcol2 = st.columns(2)
+            dcol1, dcol2, dcol3 = st.columns(3)
             with dcol1: recruit_dates = st.date_input("모집 기간", [today.date(), default_recruit_end.date()])
             with dcol2: exp_dates = st.date_input("체험 기간", [default_exp_start.date(), default_exp_end.date()])
+            # [연장 기능 추가] 처음 세팅할 때는 보통 0일 연장이지만, 입력란을 제공
+            with dcol3: exp_extend_days = st.number_input("체험기간 연장 설정 (일 단위)", min_value=0, value=0, help="필요시 연장할 일수를 입력하세요.")
             
             if st.form_submit_button("등록 완료"):
                 if shop_name and len(recruit_dates) == 2 and len(exp_dates) == 2:
@@ -258,11 +274,12 @@ else:
                         
                     st.session_state['campaigns'].append({
                         "id": len(st.session_state['campaigns']), "shop": shop_name, "region": region, 
-                        "place_link": place_link, # 저장 항목 추가
-                        "offer": offer, "images": images_b64, "keywords": keywords, "platform": platform,
-                        "recruit_count": recruit_count, "guideline": guideline,
-                        "recruit_start": recruit_dates[0], "recruit_end": recruit_dates[1],
-                        "exp_start": exp_dates[0], "exp_end": exp_dates[1], "status": "진행중"
+                        "place_link": place_link, "offer": offer, "images": images_b64, 
+                        "keywords": keywords, "platform": platform, "recruit_count": recruit_count, 
+                        "guideline": guideline, "recruit_start": recruit_dates[0], "recruit_end": recruit_dates[1],
+                        "exp_start": exp_dates[0], "exp_end": exp_dates[1], 
+                        "exp_extend_days": exp_extend_days, # 데이터베이스에 연장일수 저장
+                        "status": "진행중"
                     })
                     save_data(st.session_state['campaigns'], st.session_state['applications'])
                     st.success("성공적으로 등록되었습니다!")
@@ -291,20 +308,27 @@ else:
                     with st.form("edit_form"):
                         st.write(f"### '{c['shop']}' 캠페인 내용 수정")
                         edit_region = st.text_input("지역 수정", value=c.get('region', ''))
-                        # [업데이트] 수정폼에도 링크 추가
                         edit_place_link = st.text_input("매장 플레이스 링크 수정", value=c.get('place_link', ''))
                         edit_offer = st.text_input("제공 내역 수정", value=c['offer'])
                         edit_keywords = st.text_input("키워드 수정", value=c['keywords'])
                         edit_recruit = st.number_input("모집 인원 수정", value=int(c['recruit_count']))
+                        
+                        # [연장 기능 추가] 언제든지 관리 메뉴에서 연장 일수를 추가/수정 가능
+                        st.write("---")
+                        edit_extend_days = st.number_input("⏳ 체험기간 연장 (일 단위)", min_value=0, value=int(c.get('exp_extend_days', 0)), help="숫자를 올리면 블로거 화면에 빨간색으로 연장 마감일이 자동 표시됩니다.")
+                        st.write("---")
+                        
                         edit_guide = st.text_area("가이드라인 수정", value=c['guideline'], height=300)
+                        
                         if st.form_submit_button("수정 내용 저장"):
                             st.session_state['campaigns'][idx].update({
                                 "region": edit_region, "place_link": edit_place_link, 
                                 "offer": edit_offer, "keywords": edit_keywords, 
-                                "recruit_count": edit_recruit, "guideline": edit_guide
+                                "recruit_count": edit_recruit, "guideline": edit_guide,
+                                "exp_extend_days": edit_extend_days # 수정한 연장일수 덮어쓰기
                             })
                             save_data(st.session_state['campaigns'], st.session_state['applications'])
-                            st.success("수정이 완료되었습니다!")
+                            st.success(f"수정이 완료되었습니다! (연장 {edit_extend_days}일 적용)")
             else:
                 st.info("👆 위 검색창에 관리할 매장명을 입력해주세요.")
 
