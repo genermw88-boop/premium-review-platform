@@ -479,4 +479,44 @@ else:
                         completed = [a['review_link'] for a in apps if a['review_link'] != ""]
                         
                         comments_pool = [
-                            f
+                            f"대표님, 안녕하십니까. 리뷰어스 마케팅팀입니다.<br>이번 <b>[{selected_shop}]</b> 캠페인이 성공적으로 마감되었습니다.<br><br>요청하신 메인 키워드 <b>'{current_cam['keywords']}'</b>(을)를 타겟으로 하여 총 <b>{len(completed)}명</b>의 검증된 프리미엄 리뷰어가 포스팅을 완료했습니다. 단순 조회수 증가를 넘어, 네이버 플레이스 5대 진단 포인트를 철저히 준수하고 잠재 고객의 방문을 유도하는 정중한 존댓말과 후킹 문구를 적용하여 실제 매장 유입을 극대화할 수 있도록 세팅을 완료하였습니다.",
+                            f"안녕하세요 대표님, 리뷰어스 마케팅팀입니다.<br><b>[{selected_shop}]</b>의 체험단 프로젝트가 성황리에 마무리되어 최종 결과를 보고드립니다.<br><br>전달 주신 핵심 키워드 <b>'{current_cam['keywords']}'</b>에 맞춰 총 <b>{len(completed)}건</b>의 고품질 리뷰 발행이 완료되었습니다. 모든 포스팅은 단순 나열식 리뷰를 지양하고, 매장의 매력을 최대한 어필하는 활동성 있는 사진과 후킹 멘트로 구성되었습니다. 이를 통해 스마트플레이스로의 자연스러운 검색 유입 및 전환율 상승이 강력하게 기대됩니다.",
+                            f"리뷰어스 마케팅팀에서 <b>[{selected_shop}]</b> 캠페인 최종 마감 현황을 안내해 드립니다.<br><br>총 <b>{len(completed)}명</b>의 우수 블로거들이 <b>'{current_cam['keywords']}'</b> 키워드를 중심으로 매장의 장점을 생생하게 포스팅하였습니다. 특히 당사의 까다로운 리뷰 가이드라인(존댓말 필수 사용, 새소식 연계 등)이 100% 반영되어, 검색 유저들에게 높은 신뢰감을 주고 실제 오프라인 방문으로 즉시 이어질 수 있는 탄탄한 온라인 마케팅 기반이 마련되었습니다."
+                        ]
+                        eval_comment = random.choice(comments_pool)
+
+                        html_code = f"""
+                        <html>
+                        <head><script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script></head>
+                        <body style="font-family: 'Malgun Gothic', sans-serif;">
+                            <div id="rpt" style="background:#FFF; padding:40px; border:1px solid #EAECEF; border-radius:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+                                <h2 style="color:#1A1A1A; border-bottom: 2px solid #4A90E2; padding-bottom: 15px; margin-bottom: 25px;">📊 [{selected_shop}] 마케팅 결과 보고서</h2>
+                                <p style="font-size: 1.05rem; color: #333;"><b>수신:</b> {selected_shop} 대표님<br><b>발신:</b> 리뷰어스(ReviewUs) 마케팅팀</p>
+                                <div style="background:#F8F9FA; padding:25px; border-radius:10px; margin: 25px 0; line-height: 1.8; font-size: 0.95rem; color:#212529;">
+                                    {eval_comment}
+                                </div>
+                                <h4 style="color:#2C3E50; margin-bottom: 15px; border-left: 4px solid #4A90E2; padding-left: 10px;">🔗 최종 발행된 리뷰 포스팅 링크</h4>
+                                <div style="background:#FFF; border: 1px solid #EAECEF; padding: 20px; border-radius: 10px; word-break: break-all; line-height: 2.0; font-size: 0.95rem;">
+                        """
+                        
+                        if len(completed) > 0:
+                            for idx, link in enumerate(completed):
+                                html_code += f"<div style='margin-bottom: 8px;'><b>{idx+1}.</b> <a href='{link}' target='_blank' style='color:#4A90E2; text-decoration:underline;'>{link}</a></div>"
+                        else: html_code += "<div style='color:#868E96;'>아직 제출된 리뷰 포스팅이 없습니다.</div>"
+                            
+                        html_code += """
+                                </div>
+                            </div>
+                            <button onclick="saveImg()" style="width:100%; margin-top:20px; padding:15px; background:#4A90E2; color:white; border:none; border-radius:10px; cursor:pointer; font-weight:bold; font-size: 1.05rem;">📸 보고서 이미지로 즉시 다운로드</button>
+                            <script>
+                                function saveImg() {
+                                    html2canvas(document.getElementById('rpt'), {scale:2, useCORS:true}).then(c => {
+                                        var a = document.createElement('a'); a.download = '리뷰어스_{selected_shop}_마감보고서.png'; a.href = c.toDataURL('image/png'); a.click();
+                                    });
+                                }
+                            </script>
+                        </body>
+                        </html>
+                        """
+                        components.html(html_code, height=900, scrolling=True)
+            else: st.info("👆 위 검색창에 대시보드를 확인할 매장명을 입력해주세요.")
