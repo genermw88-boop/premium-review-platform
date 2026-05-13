@@ -98,14 +98,18 @@ def open_campaign_modal(c):
             st.image("https://via.placeholder.com/300x300.png?text=No+Image", use_container_width=True)
             
     with col_info_2:
+        # [업데이트] 플레이스 링크 클릭 시 새 창 열림 세팅
+        place_link_html = f"<a href='{c.get('place_link', '#')}' target='_blank' style='color:#4A90E2; text-decoration:none; font-weight:bold;'>👉 플레이스 바로가기</a>" if c.get('place_link') else "등록된 링크가 없습니다."
+        
         st.markdown(f"""
         **📍 지역:** {c.get('region', '전국')}  
+        **🔗 매장 링크:** {place_link_html}  
         **🎁 제공 내역:** {c['offer']}  
         **🔑 필수 키워드:** {c['keywords']}  
         **🗓️ 모집 기간:** {c['recruit_start']} ~ {c['recruit_end']}  
         **🏃 체험 기간:** {c['exp_start']} ~ {c['exp_end']}  
         **👥 모집 인원:** {c['recruit_count']}명  
-        """)
+        """, unsafe_allow_html=True)
         st.markdown("---")
         st.markdown("### 📝 리뷰 가이드라인")
         st.info(c.get('guideline', ''))
@@ -220,6 +224,8 @@ else:
             with col1:
                 shop_name = st.text_input("매장명")
                 region = st.text_input("지역 (예: 서울 강남구)") 
+                # [업데이트] 플레이스 링크 입력란 추가
+                place_link = st.text_input("매장 플레이스 링크 (URL)")
                 offer = st.text_input("제공 내역")
                 uploaded_files = st.file_uploader("이미지 첨부 (최대 4장)", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
             with col2:
@@ -227,7 +233,6 @@ else:
                 platform = st.selectbox("플랫폼", ["네이버 블로그", "인스타그램", "유튜브"])
                 recruit_count = st.number_input("블로거 모집 인원", min_value=1, value=10)
             
-            # [업데이트] 위드멤버 전용 고정 가이드라인 삽입 (수정 가능하도록 height 300 지정)
             default_guideline = """★체험가능 날짜 및 시간 : 15:00~17:00 브레이크 타임에는 체험이 불가능합니다.
 
 ★동영상 1개 이상 첨부 부탁드립니다.
@@ -253,6 +258,7 @@ else:
                         
                     st.session_state['campaigns'].append({
                         "id": len(st.session_state['campaigns']), "shop": shop_name, "region": region, 
+                        "place_link": place_link, # 저장 항목 추가
                         "offer": offer, "images": images_b64, "keywords": keywords, "platform": platform,
                         "recruit_count": recruit_count, "guideline": guideline,
                         "recruit_start": recruit_dates[0], "recruit_end": recruit_dates[1],
@@ -266,7 +272,6 @@ else:
         if not st.session_state['campaigns']: 
             st.info("등록된 캠페인이 없습니다.")
         else:
-            # [업데이트] 선택창 삭제 후, 매장명 직접 입력 검색으로 변경
             search_shop_admin = st.text_input("🔍 관리할 매장명 검색", placeholder="수정 또는 삭제할 매장명을 입력하고 엔터를 누르세요")
             
             if search_shop_admin:
@@ -274,7 +279,6 @@ else:
                 if not matches:
                     st.warning("해당 매장명으로 등록된 캠페인이 없습니다.")
                 else:
-                    # 검색 결과가 여러 개일 경우를 대비한 선택창 (정확한 수정을 위해)
                     selected_shop = st.selectbox("검색된 캠페인 중 선택", [m['shop'] for m in matches]) if len(matches) > 1 else matches[0]['shop']
                     idx = next(i for i, c in enumerate(st.session_state['campaigns']) if c['shop'] == selected_shop)
                     c = st.session_state['campaigns'][idx]
@@ -287,12 +291,18 @@ else:
                     with st.form("edit_form"):
                         st.write(f"### '{c['shop']}' 캠페인 내용 수정")
                         edit_region = st.text_input("지역 수정", value=c.get('region', ''))
+                        # [업데이트] 수정폼에도 링크 추가
+                        edit_place_link = st.text_input("매장 플레이스 링크 수정", value=c.get('place_link', ''))
                         edit_offer = st.text_input("제공 내역 수정", value=c['offer'])
                         edit_keywords = st.text_input("키워드 수정", value=c['keywords'])
                         edit_recruit = st.number_input("모집 인원 수정", value=int(c['recruit_count']))
                         edit_guide = st.text_area("가이드라인 수정", value=c['guideline'], height=300)
                         if st.form_submit_button("수정 내용 저장"):
-                            st.session_state['campaigns'][idx].update({"region": edit_region, "offer": edit_offer, "keywords": edit_keywords, "recruit_count": edit_recruit, "guideline": edit_guide})
+                            st.session_state['campaigns'][idx].update({
+                                "region": edit_region, "place_link": edit_place_link, 
+                                "offer": edit_offer, "keywords": edit_keywords, 
+                                "recruit_count": edit_recruit, "guideline": edit_guide
+                            })
                             save_data(st.session_state['campaigns'], st.session_state['applications'])
                             st.success("수정이 완료되었습니다!")
             else:
@@ -303,7 +313,6 @@ else:
         if not st.session_state['campaigns']:
             st.info("등록된 캠페인이 없습니다.")
         else:
-            # [업데이트] 대시보드에도 매장명 직접 입력 검색 적용
             search_shop_dash = st.text_input("🔍 조회할 매장명 검색", placeholder="대시보드를 확인할 매장명을 입력하고 엔터를 누르세요")
             
             if search_shop_dash:
