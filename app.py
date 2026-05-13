@@ -11,17 +11,13 @@ st.markdown("""
     .stApp { background-color: #F4F7F6; color: #212529; font-family: 'Pretendard', sans-serif; }
     .card-box { background-color: #FFFFFF; padding: 18px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.04); margin-bottom: 25px; border: 1px solid #EAECEF; transition: all 0.3s; }
     .card-box:hover { transform: translateY(-7px); box-shadow: 0 15px 35px rgba(0,0,0,0.08); }
-    
     .badge-blog { background-color: #03C75A; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
     .badge-insta { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
     .badge-yt { background-color: #FF0000; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
-    
     .offer-text { font-size: 0.95rem; color: #4A90E2; font-weight: 800; margin-top: 5px; margin-bottom: 5px; }
     .info-text { font-size: 0.85rem; color: #666666; margin-bottom: 4px; }
-    
     button[kind="tertiary"] { justify-content: flex-start !important; padding: 0px !important; margin-top: 10px !important; font-size: 1.25rem !important; font-weight: 900 !important; color: #1A1A1A !important; }
     button[kind="tertiary"]:hover { color: #4A90E2 !important; background-color: transparent !important; }
-    
     [data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #EAECEF; }
 </style>
 """, unsafe_allow_html=True)
@@ -43,11 +39,9 @@ default_exp_end = default_exp_start + timedelta(weeks=4)
 def open_campaign_modal(c):
     st.markdown(f"## 📍 {c['shop']}")
     col_img, col_info = st.columns([1, 1.5])
-    
     with col_img:
         if c['image']: st.image(c['image'], use_container_width=True)
         else: st.image("https://via.placeholder.com/300x300.png?text=No+Image", use_container_width=True)
-        
     with col_info:
         st.write(f"**🎁 제공 내역:** {c['offer']}")
         st.write(f"**🔑 필수 키워드:** {c['keywords']}")
@@ -60,10 +54,8 @@ def open_campaign_modal(c):
     st.info(c.get('guideline', '등록된 가이드라인이 없습니다.'))
     
     tab_apply, tab_submit = st.tabs(["✍️ 체험단 신청하기", "✅ 리뷰 링크 제출(선정자)"])
-    
     with tab_apply:
         with st.form(f"modal_apply_{c['id']}"):
-            st.write("#### 신청 정보 입력")
             col_f1, col_f2 = st.columns(2)
             with col_f1:
                 name = st.text_input("이름 (실명)")
@@ -72,13 +64,11 @@ def open_campaign_modal(c):
             with col_f2:
                 blog_url = st.text_input("운영 채널 URL")
                 visitors = st.number_input("일 평균 방문자 수", min_value=0, step=50)
-                
             if st.form_submit_button("신청서 제출 완료"):
                 if name and contact and blog_url:
                     st.session_state['applications'].append({
-                        "campaign_id": c['id'], "shop": c['shop'], 
-                        "name": name, "contact": contact, "address": address,
-                        "blog_url": blog_url, "visitors": visitors,
+                        "campaign_id": c['id'], "shop": c['shop'], "name": name, "contact": contact, 
+                        "address": address, "blog_url": blog_url, "visitors": visitors,
                         "review_link": "", "status": "신청완료"
                     })
                     st.success("신청이 완료되었습니다! 창을 닫아주세요.")
@@ -86,7 +76,6 @@ def open_campaign_modal(c):
                     
     with tab_submit:
         with st.form(f"modal_submit_{c['id']}"):
-            st.write("#### 리뷰 포스팅 제출")
             my_name = st.text_input("신청 시 이름")
             my_contact = st.text_input("신청 시 연락처")
             final_link = st.text_input("리뷰 URL (포스팅 링크)")
@@ -125,9 +114,6 @@ with st.sidebar:
 # 📱 메인 화면 분기
 # ==========================================
 if not st.session_state['admin_logged_in']:
-    # ----------------------------------------
-    # [블로거 화면]
-    # ----------------------------------------
     st.markdown("""
         <div style="width:100%; padding: 50px 20px; background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=1200&auto=format&fit=crop') center/cover; border-radius:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; margin-bottom:40px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
             <h1 style="color:#FFFFFF; margin:0; font-size:2.8rem; font-weight:900; letter-spacing: -1px;">PREMIUM CAMPAIGN</h1>
@@ -135,14 +121,12 @@ if not st.session_state['admin_logged_in']:
         </div>
     """, unsafe_allow_html=True)
 
-    if not st.session_state['campaigns']:
-        st.info("현재 모집 중인 캠페인이 없습니다. 곧 멋진 캠페인으로 찾아뵙겠습니다!")
+    if not st.session_state['campaigns']: st.info("현재 모집 중인 캠페인이 없습니다.")
     else:
         cols = st.columns(4) 
         for idx, c in enumerate(st.session_state['campaigns']):
             with cols[idx % 4]: 
                 st.markdown('<div class="card-box">', unsafe_allow_html=True)
-                
                 if c['image']: st.image(c['image'], use_container_width=True)
                 else: st.markdown('<div style="height:200px; background:#F1F3F5; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#ADB5BD; font-weight:bold;">이미지 준비중</div>', unsafe_allow_html=True)
                 
@@ -157,21 +141,17 @@ if not st.session_state['admin_logged_in']:
                 st.markdown(f'<div class="offer-text">🎁 {c["offer"]}</div>', unsafe_allow_html=True)
                 st.markdown(f'<div class="info-text">🗓️ 마감: {c["recruit_end"].strftime("%m.%d")}</div>', unsafe_allow_html=True)
                 st.markdown(f'<div class="info-text" style="color:#adb5bd; font-size:0.7rem;">👆 매장명을 클릭하면 신청창이 열립니다.</div>', unsafe_allow_html=True)
-                
                 st.markdown('</div>', unsafe_allow_html=True)
 
 else:
-    # ----------------------------------------
-    # [관리자 전용 화면] 
-    # ----------------------------------------
     if admin_menu == "새 캠페인 등록":
         st.title("🏢 새 캠페인 등록")
         with st.form("campaign_form"):
             col1, col2 = st.columns(2)
             with col1:
                 shop_name = st.text_input("매장명")
-                offer = st.text_input("제공 내역 (예: 5만원 상당 식사권)")
-                uploaded_file = st.file_uploader("대표 이미지 (정사각형 권장)", type=['png', 'jpg', 'jpeg'])
+                offer = st.text_input("제공 내역")
+                uploaded_file = st.file_uploader("대표 이미지", type=['png', 'jpg', 'jpeg'])
             with col2:
                 keywords = st.text_input("필수 노출 키워드")
                 platform = st.selectbox("메인 타겟 플랫폼", ["네이버 블로그", "인스타그램 릴스", "유튜브 쇼츠"])
@@ -182,7 +162,6 @@ else:
 3. 사진 빈도: 충분한 매장/메뉴 사진 첨부
 4. 새소식 업데이트 연계: 플레이스 새소식 언급
 5. 리뷰 전환율: 잠재 고객 방문 유도를 위한 정중한 존댓말 필수 사용"""
-            
             st.write("---")
             guideline = st.text_area("📝 리뷰 가이드라인", value=default_guideline, height=150)
             col3, col4 = st.columns(2)
@@ -207,21 +186,18 @@ else:
             selected_shop = st.selectbox("수정/삭제할 캠페인 선택", [c['shop'] for c in st.session_state['campaigns']])
             idx = next(i for i, c in enumerate(st.session_state['campaigns']) if c['shop'] == selected_shop)
             c = st.session_state['campaigns'][idx]
-            
             col_del1, col_del2 = st.columns([4, 1])
             with col_del2:
                 if st.button("❌ 완전 삭제", type="primary"):
                     st.session_state['campaigns'].pop(idx)
                     st.rerun()
 
-            # [복구 완료] 수정 폼 영역
             with st.form("edit_form"):
                 st.write("### 캠페인 내용 수정")
                 new_offer = st.text_input("제공 내역 수정", value=c['offer'])
                 new_keywords = st.text_input("키워드 수정", value=c['keywords'])
                 new_recruit_count = st.number_input("모집 인원 수정", min_value=1, value=int(c['recruit_count']))
                 new_guideline = st.text_area("가이드라인 수정", value=c.get('guideline', ''))
-                
                 if st.form_submit_button("수정 내용 저장"):
                     st.session_state['campaigns'][idx]['offer'] = new_offer
                     st.session_state['campaigns'][idx]['keywords'] = new_keywords
@@ -234,6 +210,7 @@ else:
         if not st.session_state['campaigns']: st.info("등록된 캠페인이 없습니다.")
         else:
             selected_shop = st.selectbox("조회할 캠페인 선택", [c['shop'] for c in st.session_state['campaigns']])
+            current_campaign = next(c for c in st.session_state['campaigns'] if c['shop'] == selected_shop)
             app_list = [app for app in st.session_state['applications'] if app['shop'] == selected_shop]
             
             if app_list:
@@ -243,50 +220,68 @@ else:
                     if visitors >= 500: grade = "고급"
                     elif visitors >= 100: grade = "중급"
                     else: grade = "초급"
-                    
                     submitted_link = app.get('review_link', '')
                     link_status = submitted_link if submitted_link != "" else "미제출"
                     eval_status = "평가완료" if submitted_link != "" else "대기중"
-                    
                     table_data.append({
                         "번호": i + 1, "계정URL": app.get('blog_url', ''), "이름": app.get('name', ''),
                         "등급": grade, "일 방문": f"{visitors:,}", "연락처": app.get('contact', ''),
                         "주소": app.get('address', ''), "링크주소": link_status,
                         "첨부자료": "자료없음", "평가": eval_status
                     })
-                
                 df = pd.DataFrame(table_data)
-                st.dataframe(
-                    df,
-                    column_config={"계정URL": st.column_config.LinkColumn("계정URL"), "링크주소": st.column_config.LinkColumn("링크주소")},
-                    hide_index=True, use_container_width=True
-                )
+                st.dataframe(df, column_config={"계정URL": st.column_config.LinkColumn("계정URL"), "링크주소": st.column_config.LinkColumn("링크주소")}, hide_index=True, use_container_width=True)
             else: st.write("아직 이 캠페인에 신청한 블로거가 없습니다.")
             
-            # [복구 완료] 마감 보고서 출력 기능 (블랙 & 골드 프리미엄 테마)
+            # ==========================================
+            # 📈 업데이트된 화이트 톤 프리미엄 마감 보고서
+            # ==========================================
             st.markdown("---")
-            if st.button("📈 마감 보고서 출력하기"):
+            if st.button("📈 자동 마감 보고서 출력"):
                 completed = [app['review_link'] for app in app_list if app['review_link'] != ""]
+                keywords = current_campaign['keywords']
+                target_count = current_campaign['recruit_count']
+                completed_count = len(completed)
                 
-                st.markdown(f"""
-                <div style="background-color:#111111; color:#D4AF37; padding:30px; border-radius:15px; border:2px solid #D4AF37; margin-top:20px;">
-                    <h2 style="text-align:center; color:#D4AF37;">[{selected_shop}] 체험단 마감 리포트</h2>
-                    <hr style="border-color:#D4AF37;">
-                    <h4 style="color:#FFFFFF;">1. 캠페인 요약</h4>
-                    <ul style="color:#FFFFFF;">
-                        <li><b>모집 인원:</b> 목표 {next(cam['recruit_count'] for cam in st.session_state['campaigns'] if cam['shop'] == selected_shop)}명</li>
-                        <li><b>리뷰 완료 건수:</b> 총 {len(completed)}건 달성</li>
+                # 자동 평가 멘트 생성 (위드멤버 전략 반영)
+                eval_comment = f"본 캠페인은 목표 인원 {target_count}명 중 <b>{completed_count}명</b>의 검증된 리뷰어가 참여하여 성공적으로 포스팅을 완료했습니다. 전달해주신 메인 키워드 <b>'{keywords}'</b>를 중심으로 검색 노출이 최적화될 수 있도록 가이드되었으며, 리뷰 내 정중한 존댓말과 후킹 문구를 배치하여 네이버 플레이스 방문 전환율을 효과적으로 높일 수 있도록 세팅되었습니다."
+
+                # HTML 리포트 생성 (깔끔한 화이트 테마 적용)
+                report_html = f"""
+                <div style="background-color:#FFFFFF; color:#212529; padding:40px; border-radius:12px; border:1px solid #EAECEF; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top:20px; font-family:'Pretendard', sans-serif;">
+                    <div style="text-align:center; margin-bottom: 30px;">
+                        <h2 style="color:#1A1A1A; font-weight:900; margin-bottom:5px;">[{selected_shop}] 캠페인 최종 마감 리포트</h2>
+                        <p style="color:#868E96; font-size:0.9rem; margin-top:0;">위드멤버 프리미엄 체험단 마케팅 결과 보고</p>
+                    </div>
+                    
+                    <hr style="border: 0; border-top: 2px solid #4A90E2; margin-bottom: 30px;">
+
+                    <h4 style="color:#2C3E50; border-left: 4px solid #4A90E2; padding-left: 10px; margin-bottom:15px;">1. 캠페인 종합 요약</h4>
+                    <ul style="background-color:#F8F9FA; padding:20px 20px 20px 40px; border-radius:8px; line-height:1.8; color:#495057; font-size:0.95rem;">
+                        <li><b>진행 매장명:</b> {selected_shop}</li>
+                        <li><b>타겟 키워드:</b> <span style="color:#4A90E2; font-weight:bold;">{keywords}</span></li>
+                        <li><b>리뷰 달성률:</b> 총 {completed_count}건 포스팅 완료 (목표 {target_count}명)</li>
                     </ul>
-                    <h4 style="color:#FFFFFF;">2. 플레이스 이슈 진단 결과</h4>
-                    <ul style="color:#FFFFFF;">
-                        <li>✅ <b>리뷰 활동성:</b> 매장 분위기 스케치 완료</li>
-                        <li>✅ <b>키워드 부재 방지:</b> 타겟 키워드 본문/제목 삽입</li>
-                        <li>✅ <b>사진 빈도:</b> 가이드라인(사진 15장 이상/숏폼 15초 이상) 충족</li>
-                        <li>✅ <b>새소식 업데이트 연계:</b> 플레이스 정보 반영 완료</li>
-                        <li>✅ <b>리뷰 전환율:</b> 정중한 존댓말 및 후킹 문구 적용 확인</li>
-                    </ul>
-                    <h4 style="color:#FFFFFF;">3. 최종 리뷰 링크 리스트</h4>
+
+                    <h4 style="color:#2C3E50; border-left: 4px solid #4A90E2; padding-left: 10px; margin-top: 30px; margin-bottom:15px;">2. 마감 종합 평가 및 기대 효과</h4>
+                    <div style="background-color:#F0F4F8; padding:20px; border-radius:8px; color:#333; line-height:1.6; font-size:0.95rem;">
+                        {eval_comment}
+                    </div>
+
+                    <h4 style="color:#2C3E50; border-left: 4px solid #4A90E2; padding-left: 10px; margin-top: 30px; margin-bottom:15px;">3. 발행된 리뷰 링크 취합</h4>
+                    <div style="padding-left:10px; line-height:1.8; font-size:0.95rem;">
+                """
+                
+                # 수집된 링크를 클릭 가능한 형태로 추가
+                if len(completed) > 0:
+                    for idx, link in enumerate(completed):
+                        report_html += f"<div><b>{idx+1}.</b> <a href='{link}' target='_blank' style='color:#4A90E2; text-decoration:none;'>{link}</a></div>"
+                else:
+                    report_html += "<div style='color:#868E96;'>아직 제출된 리뷰 포스팅이 없습니다.</div>"
+                
+                report_html += """
+                    </div>
                 </div>
-                """, unsafe_allow_html=True)
-                for idx, link in enumerate(completed): 
-                    st.write(f"**{idx+1}.** {link}")
+                """
+                
+                st.markdown(report_html, unsafe_allow_html=True)
