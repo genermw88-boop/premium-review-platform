@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 # 1. 페이지 설정
 st.set_page_config(page_title="위드멤버 프리미엄 체험단", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS 
+# 2. CSS (버튼 및 디자인 최적화)
 st.markdown("""
 <style>
     .stApp { background-color: #F4F7F6; color: #212529; font-family: 'Pretendard', sans-serif; }
@@ -17,8 +17,10 @@ st.markdown("""
     .shop-title { font-size: 1.25rem; font-weight: 900; margin-top: 12px; margin-bottom: 4px; color: #1A1A1A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
     .offer-text { font-size: 0.95rem; color: #4A90E2; font-weight: 800; margin-bottom: 10px; }
     .info-text { font-size: 0.85rem; color: #666666; margin-bottom: 4px; }
-    div.stButton > button { background-color: #2C3E50; color: white; border-radius: 8px; font-weight: bold; width: 100%; border: none; padding: 12px; transition: 0.2s; }
-    div.stButton > button:hover { background-color: #1A252F; color: white; }
+    
+    /* 팝업 버튼을 이미지 바로 아래에서 눈에 띄게 만들기 */
+    div.stButton > button { background-color: #1A1A1A; color: #D4AF37; border-radius: 8px; font-weight: bold; width: 100%; border: none; padding: 10px; transition: 0.2s; }
+    div.stButton > button:hover { background-color: #D4AF37; color: #1A1A1A; }
     [data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #EAECEF; }
 </style>
 """, unsafe_allow_html=True)
@@ -32,6 +34,70 @@ today = datetime.now()
 default_recruit_end = today + timedelta(days=7)
 default_exp_start = default_recruit_end + timedelta(days=1)
 default_exp_end = default_exp_start + timedelta(weeks=4)
+
+# ==========================================
+# 🎁 캠페인 상세 팝업창 (Modal) 함수 설정
+# ==========================================
+@st.dialog("✨ 캠페인 상세 정보 및 신청")
+def open_campaign_modal(c):
+    st.markdown(f"## 📍 {c['shop']}")
+    col_img, col_info = st.columns([1, 1.5])
+    
+    with col_img:
+        if c['image']: st.image(c['image'], use_container_width=True)
+        else: st.image("https://via.placeholder.com/300x300.png?text=No+Image", use_container_width=True)
+        
+    with col_info:
+        st.write(f"**🎁 제공 내역:** {c['offer']}")
+        st.write(f"**🔑 필수 키워드:** {c['keywords']}")
+        st.write(f"**🗓️ 모집 기간:** {c['recruit_start']} ~ {c['recruit_end']}")
+        st.write(f"**🏃 체험 기간:** {c['exp_start']} ~ {c['exp_end']}")
+        st.write(f"**👥 모집 인원:** {c['recruit_count']}명 ({c['platform']})")
+    
+    st.markdown("---")
+    st.markdown("### 📝 리뷰 가이드라인")
+    st.info(c.get('guideline', '등록된 가이드라인이 없습니다.'))
+    
+    tab_apply, tab_submit = st.tabs(["✍️ 체험단 신청하기", "✅ 리뷰 링크 제출(선정자)"])
+    
+    with tab_apply:
+        with st.form(f"modal_apply_{c['id']}"):
+            st.write("#### 신청 정보 입력")
+            col_f1, col_f2 = st.columns(2)
+            with col_f1:
+                name = st.text_input("이름 (실명)")
+                contact = st.text_input("연락처 (- 없이)")
+                address = st.text_input("거주 지역 (예: 서울 광진구)")
+            with col_f2:
+                blog_url = st.text_input("운영 채널 URL")
+                visitors = st.number_input("일 평균 방문자 수", min_value=0, step=50)
+                
+            if st.form_submit_button("신청서 제출 완료"):
+                if name and contact and blog_url:
+                    st.session_state['applications'].append({
+                        "campaign_id": c['id'], "shop": c['shop'], 
+                        "name": name, "contact": contact, "address": address,
+                        "blog_url": blog_url, "visitors": visitors,
+                        "review_link": "", "status": "신청완료"
+                    })
+                    st.success("신청이 완료되었습니다! 창을 닫아주세요.")
+                else: st.error("이름, 연락처, 채널 URL은 필수 입력입니다.")
+                    
+    with tab_submit:
+        with st.form(f"modal_submit_{c['id']}"):
+            st.write("#### 리뷰 포스팅 제출")
+            my_name = st.text_input("신청 시 이름")
+            my_contact = st.text_input("신청 시 연락처")
+            final_link = st.text_input("리뷰 URL (포스팅 링크)")
+            if st.form_submit_button("리뷰 제출 완료"):
+                submitted = False
+                for app in st.session_state['applications']:
+                    if app['campaign_id'] == c['id'] and app['name'] == my_name and app['contact'] == my_contact:
+                        app['review_link'] = final_link
+                        app['status'] = "리뷰제출완료"
+                        submitted = True
+                if submitted: st.success("리뷰 URL이 접수되었습니다! 창을 닫아주세요.")
+                else: st.error("일치하는 신청 내역이 없습니다.")
 
 # ==========================================
 # 🔒 관리자 사이드바
@@ -61,21 +127,23 @@ if not st.session_state['admin_logged_in']:
     # ----------------------------------------
     # [블로거 화면]
     # ----------------------------------------
+    # 사진 찍는 인플루언서 느낌의 트렌디한 배너 이미지로 교체
     st.markdown("""
-        <div style="width:100%; padding: 40px 20px; background: url('https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1200&auto=format&fit=crop') center/cover; border-radius:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; margin-bottom:40px; box-shadow: inset 0 0 0 1000px rgba(0,0,0,0.6);">
-            <h1 style="color:#FFFFFF; margin:0; font-size:2.5rem; font-weight:900;">PREMIUM CAMPAIGN</h1>
-            <p style="color:#D4AF37; margin-top:10px; font-size:1.1rem; font-weight:bold;">상위 10% 리뷰어를 위한 프라이빗 매칭 플랫폼</p>
+        <div style="width:100%; padding: 50px 20px; background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('https://images.unsplash.com/photo-1515003197210-ce9cd0324027?q=80&w=1200&auto=format&fit=crop') center/cover; border-radius:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; margin-bottom:40px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
+            <h1 style="color:#FFFFFF; margin:0; font-size:2.8rem; font-weight:900; letter-spacing: -1px;">PREMIUM CAMPAIGN</h1>
+            <p style="color:#F1E5AC; margin-top:10px; font-size:1.15rem; font-weight:bold;">상위 10% 트렌드 세터를 위한 프라이빗 매칭 플랫폼</p>
         </div>
     """, unsafe_allow_html=True)
 
     if not st.session_state['campaigns']:
-        st.info("현재 모집 중인 캠페인이 없습니다.")
+        st.info("현재 모집 중인 캠페인이 없습니다. 곧 멋진 캠페인으로 찾아뵙겠습니다!")
     else:
         cols = st.columns(4) 
         for idx, c in enumerate(st.session_state['campaigns']):
             with cols[idx % 4]: 
                 st.markdown('<div class="card-box">', unsafe_allow_html=True)
-                if c['image'] is not None: st.image(c['image'], use_container_width=True)
+                
+                if c['image']: st.image(c['image'], use_container_width=True)
                 else: st.markdown('<div style="height:200px; background:#F1F3F5; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#ADB5BD; font-weight:bold;">이미지 준비중</div>', unsafe_allow_html=True)
                 
                 badge_class = "badge-blog"
@@ -85,64 +153,19 @@ if not st.session_state['admin_logged_in']:
                 st.markdown(f'<div style="margin-top:12px;"><span class="{badge_class}">{c["platform"]}</span></div>', unsafe_allow_html=True)
                 st.markdown(f'<div class="shop-title">{c["shop"]}</div>', unsafe_allow_html=True)
                 st.markdown(f'<div class="offer-text">🎁 {c["offer"]}</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="info-text">🗓️ 모집: {c["recruit_start"].strftime("%m.%d")} ~ {c["recruit_end"].strftime("%m.%d")}</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="info-text">👥 인원: {c["recruit_count"]}명</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="info-text">🗓️ 마감: {c["recruit_end"].strftime("%m.%d")}</div>', unsafe_allow_html=True)
                 
-                with st.popover("자세히 보기 및 신청", use_container_width=True):
-                    st.markdown(f"### 📍 {c['shop']}")
-                    st.write(f"**🔑 필수 키워드:** {c['keywords']}")
-                    st.write(f"**🏃 체험 기간:** {c['exp_start']} ~ {c['exp_end']}")
+                st.write("")
+                
+                # 팝업을 띄우는 메인 버튼
+                if st.button(f"🔍 자세히 보기 및 신청", key=f"open_modal_{c['id']}", use_container_width=True):
+                    open_campaign_modal(c)
                     
-                    st.markdown("""<div style="background-color:#F8F9FA; padding:15px; border-radius:8px; border-left:4px solid #4A90E2; margin-top:15px; margin-bottom:15px; font-size:0.9rem;">""", unsafe_allow_html=True)
-                    st.markdown("**📝 리뷰 가이드라인**")
-                    st.write(c.get('guideline', ''))
-                    st.markdown("</div>", unsafe_allow_html=True)
-                    
-                    tab_apply, tab_submit = st.tabs(["✍️ 체험단 신청", "✅ 리뷰 제출 (선정자)"])
-                    
-                    # [업데이트] 신청 항목 세분화
-                    with tab_apply:
-                        with st.form(f"apply_{c['id']}"):
-                            col_f1, col_f2 = st.columns(2)
-                            with col_f1:
-                                name = st.text_input("이름 (실명)")
-                                contact = st.text_input("연락처 (- 없이)")
-                                address = st.text_input("거주 지역 (예: 서울 광진구)")
-                            with col_f2:
-                                blog_url = st.text_input("운영 채널 URL")
-                                visitors = st.number_input("일 평균 방문자 수", min_value=0, step=50)
-                                
-                            if st.form_submit_button("신청서 제출 완료"):
-                                if name and contact and blog_url:
-                                    st.session_state['applications'].append({
-                                        "campaign_id": c['id'], "shop": c['shop'], 
-                                        "name": name, "contact": contact, "address": address,
-                                        "blog_url": blog_url, "visitors": visitors,
-                                        "review_link": "", "status": "신청완료"
-                                    })
-                                    st.success("성공적으로 신청되었습니다!")
-                                else:
-                                    st.error("이름, 연락처, URL은 필수 입력입니다.")
-                                    
-                    with tab_submit:
-                        with st.form(f"submit_{c['id']}"):
-                            my_name = st.text_input("신청 시 입력한 이름")
-                            my_contact = st.text_input("신청 시 입력한 연락처")
-                            final_link = st.text_input("작성 완료된 리뷰 URL (포스팅 링크)")
-                            if st.form_submit_button("리뷰 제출 완료"):
-                                submitted = False
-                                for app in st.session_state['applications']:
-                                    if app['campaign_id'] == c['id'] and app['name'] == my_name and app['contact'] == my_contact:
-                                        app['review_link'] = final_link
-                                        app['status'] = "리뷰제출완료"
-                                        submitted = True
-                                if submitted: st.success("리뷰 포스팅 URL이 성공적으로 접수되었습니다.")
-                                else: st.error("일치하는 신청 내역이 없습니다.")
                 st.markdown('</div>', unsafe_allow_html=True)
 
 else:
     # ----------------------------------------
-    # [관리자 전용 화면]
+    # [관리자 전용 화면] - 기능은 V7과 동일하게 유지
     # ----------------------------------------
     if admin_menu == "새 캠페인 등록":
         st.title("🏢 새 캠페인 등록")
@@ -157,7 +180,6 @@ else:
                 platform = st.selectbox("메인 타겟 플랫폼", ["네이버 블로그", "인스타그램 릴스", "유튜브 쇼츠"])
                 recruit_count = st.number_input("모집 인원", min_value=1, value=10)
             
-            # [수정 내역 반영] 정중한 존댓말 등 5포인트 가이드라인
             default_guideline = """1. 리뷰 활동성: 매장 분위기 스케치
 2. 키워드 부재 방지: 타겟 키워드 본문/제목 삽입
 3. 사진 빈도: 충분한 매장/메뉴 사진 첨부
@@ -187,7 +209,6 @@ else:
         else:
             selected_shop = st.selectbox("수정/삭제할 캠페인 선택", [c['shop'] for c in st.session_state['campaigns']])
             idx = next(i for i, c in enumerate(st.session_state['campaigns']) if c['shop'] == selected_shop)
-            c = st.session_state['campaigns'][idx]
             if st.button("❌ 완전 삭제", type="primary"):
                 st.session_state['campaigns'].pop(idx)
                 st.rerun()
@@ -199,27 +220,24 @@ else:
             selected_shop = st.selectbox("조회할 캠페인 선택", [c['shop'] for c in st.session_state['campaigns']])
             app_list = [app for app in st.session_state['applications'] if app['shop'] == selected_shop]
             
-            # [업데이트] 44.png 이미지와 동일한 형태의 테이블 데이터 구성
             if app_list:
                 table_data = []
                 for i, app in enumerate(app_list):
-                    # 일 방문자 수에 따른 자동 등급 계산
                     visitors = int(app.get('visitors', 0))
                     if visitors >= 500: grade = "고급"
                     elif visitors >= 100: grade = "중급"
                     else: grade = "초급"
                     
-                    # 링크 제출 여부 파악
                     submitted_link = app.get('review_link', '')
                     link_status = submitted_link if submitted_link != "" else "미제출"
-                    eval_status = "평가하기" if submitted_link != "" else "★"
+                    eval_status = "평가완료" if submitted_link != "" else "대기중"
                     
                     table_data.append({
                         "번호": i + 1,
                         "계정URL": app.get('blog_url', ''),
                         "이름": app.get('name', ''),
                         "등급": grade,
-                        "일 방문": f"{visitors:,}", # 천 단위 콤마
+                        "일 방문": f"{visitors:,}",
                         "연락처": app.get('contact', ''),
                         "주소": app.get('address', ''),
                         "링크주소": link_status,
@@ -228,15 +246,9 @@ else:
                     })
                 
                 df = pd.DataFrame(table_data)
-                
-                # 표(데이터프레임) 출력 설정
                 st.dataframe(
                     df,
-                    column_config={
-                        "계정URL": st.column_config.LinkColumn("계정URL"),
-                        "링크주소": st.column_config.LinkColumn("링크주소")
-                    },
-                    hide_index=True,
-                    use_container_width=True
+                    column_config={"계정URL": st.column_config.LinkColumn("계정URL"), "링크주소": st.column_config.LinkColumn("링크주소")},
+                    hide_index=True, use_container_width=True
                 )
             else: st.write("아직 이 캠페인에 신청한 블로거가 없습니다.")
