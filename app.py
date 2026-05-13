@@ -2,11 +2,52 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 import streamlit.components.v1 as components
+import json
+import os
+import base64
+import random
+
+# ==========================================
+# 💾 [핵심 업데이트] 자동 저장 미니 데이터베이스 세팅
+# ==========================================
+DATA_FILE = "withmember_db.json"
+
+def load_data():
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                # 날짜 데이터를 파이썬이 인식할 수 있게 변환
+                for c in data.get('campaigns', []):
+                    c['recruit_start'] = datetime.strptime(c['recruit_start'], "%Y-%m-%d").date()
+                    c['recruit_end'] = datetime.strptime(c['recruit_end'], "%Y-%m-%d").date()
+                    c['exp_start'] = datetime.strptime(c['exp_start'], "%Y-%m-%d").date()
+                    c['exp_end'] = datetime.strptime(c['exp_end'], "%Y-%m-%d").date()
+                return data.get('campaigns', []), data.get('applications', [])
+        except:
+            pass
+    return [], []
+
+def save_data(campaigns, applications):
+    camps_to_save = []
+    for c in campaigns:
+        c_copy = c.copy()
+        # 저장할 때는 날짜를 다시 글자(문자열)로 변환
+        c_copy['recruit_start'] = c_copy['recruit_start'].strftime("%Y-%m-%d")
+        c_copy['recruit_end'] = c_copy['recruit_end'].strftime("%Y-%m-%d")
+        c_copy['exp_start'] = c_copy['exp_start'].strftime("%Y-%m-%d")
+        c_copy['exp_end'] = c_copy['exp_end'].strftime("%Y-%m-%d")
+        camps_to_save.append(c_copy)
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump({'campaigns': camps_to_save, 'applications': applications}, f, ensure_ascii=False)
+
+def display_b64_image(b64_str):
+    st.image(base64.b64decode(b64_str), use_container_width=True)
 
 # 1. 페이지 설정
 st.set_page_config(page_title="위드멤버 프리미엄 체험단", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS 
+# 2. CSS (디자인 세팅)
 st.markdown("""
 <style>
     .stApp { background-color: #F4F7F6; color: #212529; font-family: 'Pretendard', sans-serif; }
@@ -27,10 +68,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 3. 데이터 초기화
-if 'campaigns' not in st.session_state: st.session_state['campaigns'] = []
-if 'applications' not in st.session_state: st.session_state['applications'] = []
-if 'admin_logged_in' not in st.session_state: st.session_state['admin_logged_in'] = False
+# 3. 새로고침해도 안 날아가도록 데이터 로딩
+if 'data_loaded' not in st.session_state:
+    camps, apps = load_data()
+    st.session_state['campaigns'] = camps
+    st.session_state['applications'] = apps
+    st.session_state['admin_logged_in'] = False
+    st.session_state['data_loaded'] = True
 
 today = datetime.now()
 default_recruit_end = today + timedelta(days=7)
@@ -38,7 +82,7 @@ default_exp_start = default_recruit_end + timedelta(days=1)
 default_exp_end = default_exp_start + timedelta(weeks=4)
 
 # ==========================================
-# 🎁 캠페인 상세 팝업창 
+# 🎁 캠페인 상세 팝업창
 # ==========================================
 @st.dialog("✨ 캠페인 상세 정보 및 신청", width="large") 
 def open_campaign_modal(c):
@@ -47,11 +91,11 @@ def open_campaign_modal(c):
     
     with col_info_1:
         if c.get('images'):
-            st.image(c['images'][0], use_container_width=True)
+            display_b64_image(c['images'][0])
             if len(c['images']) > 1:
                 cols = st.columns(len(c['images'])-1)
-                for i, img in enumerate(c['images'][1:]):
-                    with cols[i]: st.image(img, use_container_width=True)
+                for i, img_b64 in enumerate(c['images'][1:]):
+                    with cols[i]: display_b64_image(img_b64)
         else:
             st.image("https://via.placeholder.com/300x300.png?text=No+Image", use_container_width=True)
             
@@ -88,6 +132,7 @@ def open_campaign_modal(c):
                         "contact": contact, "address": address, "blog_url": blog_url, 
                         "visitors": visitors, "review_link": "", "status": "신청완료"
                     })
+                    save_data(st.session_state['campaigns'], st.session_state['applications']) # 데이터 저장
                     st.success("신청이 완료되었습니다!")
                 else:
                     st.error("성함, 연락처, URL은 필수 항목입니다.")
@@ -107,11 +152,14 @@ def open_campaign_modal(c):
                         app['review_link'] = s_link
                         app['status'] = "리뷰제출완료"
                         submitted = True
-                if submitted: st.success("리뷰가 정상적으로 제출되었습니다.")
-                else: st.error("일치하는 신청 내역이 없습니다. 성함과 연락처를 확인해주세요.")
+                if submitted: 
+                    save_data(st.session_state['campaigns'], st.session_state['applications']) # 데이터 저장
+                    st.success("리뷰가 정상적으로 제출되었습니다.")
+                else: 
+                    st.error("일치하는 신청 내역이 없습니다. 성함과 연락처를 확인해주세요.")
 
 # ==========================================
-# 🔒 관리자 및 메인 로직
+# 🔒 관리자 사이드바
 # ==========================================
 with st.sidebar:
     if not st.session_state['admin_logged_in']:
@@ -132,30 +180,22 @@ with st.sidebar:
             st.session_state['admin_logged_in'] = False
             st.rerun()
 
+# ==========================================
+# 📱 메인 화면 분기
+# ==========================================
 if not st.session_state['admin_logged_in']:
-    # [블로거 메인 화면]
     st.markdown('<div style="width:100%; padding: 50px 20px; background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url(\'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=1200&auto=format&fit=crop\') center/cover; border-radius:20px; text-align:center; margin-bottom:20px;"><h1 style="color:white;">PREMIUM CAMPAIGN</h1><p style="color:#F1E5AC;">위드멤버 프리미엄 체험단</p></div>', unsafe_allow_html=True)
     
-    # [해결 1] 지역과 매장명 검색창 완벽 분리
     col_search1, col_search2 = st.columns(2)
-    with col_search1:
-        search_region = st.text_input("📍 지역 검색", placeholder="예: 강남, 부천")
-    with col_search2:
-        search_shop = st.text_input("🏪 매장명 검색", placeholder="예: 매장 상호명 입력")
+    with col_search1: search_region = st.text_input("📍 지역 검색", placeholder="예: 강남, 부천")
+    with col_search2: search_shop = st.text_input("🏪 매장명 검색", placeholder="예: 매장 상호명 입력")
     st.markdown("<br>", unsafe_allow_html=True)
     
     filtered_campaigns = []
     for c in st.session_state['campaigns']:
-        match_region = True
-        match_shop = True
-        
-        if search_region:
-            match_region = search_region.lower() in c.get('region', '').lower()
-        if search_shop:
-            match_shop = search_shop.lower() in c['shop'].lower()
-            
-        if match_region and match_shop:
-            filtered_campaigns.append(c)
+        match_region = search_region.lower() in c.get('region', '').lower() if search_region else True
+        match_shop = search_shop.lower() in c['shop'].lower() if search_shop else True
+        if match_region and match_shop: filtered_campaigns.append(c)
     
     if not filtered_campaigns: 
         st.info("검색 조건에 맞는 캠페인이 없습니다.")
@@ -167,7 +207,7 @@ if not st.session_state['admin_logged_in']:
                     if st.button(c['shop'], key=f"btn_{c['id']}", type="tertiary", use_container_width=True):
                         open_campaign_modal(c)
                     
-                    if c.get('images'): st.image(c['images'][0], use_container_width=True)
+                    if c.get('images'): display_b64_image(c['images'][0])
                     else: st.image("https://via.placeholder.com/300x300.png?text=No+Image", use_container_width=True)
                     
                     st.markdown(f'<div class="info-text" style="margin-top:10px; font-weight:bold;">📍 {c.get("region", "전국")}</div>', unsafe_allow_html=True)
@@ -175,7 +215,6 @@ if not st.session_state['admin_logged_in']:
                     st.markdown(f'<div class="info-text">🗓️ 마감: {c["recruit_end"].strftime("%m.%d")}</div>', unsafe_allow_html=True)
 
 else:
-    # [관리자 전용 화면]
     if admin_menu == "새 캠페인 등록":
         st.title("🏢 새 캠페인 등록")
         with st.form("reg_form"):
@@ -197,13 +236,20 @@ else:
             
             if st.form_submit_button("등록 완료"):
                 if shop_name and len(recruit_dates) == 2 and len(exp_dates) == 2:
+                    # 이미지를 텍스트 데이터(base64)로 변환하여 DB에 안전하게 저장
+                    images_b64 = []
+                    for uf in uploaded_files[:4]:
+                        b64 = base64.b64encode(uf.getvalue()).decode('utf-8')
+                        images_b64.append(b64)
+                        
                     st.session_state['campaigns'].append({
                         "id": len(st.session_state['campaigns']), "shop": shop_name, "region": region, 
-                        "offer": offer, "images": uploaded_files[:4], "keywords": keywords, "platform": platform,
+                        "offer": offer, "images": images_b64, "keywords": keywords, "platform": platform,
                         "recruit_count": recruit_count, "guideline": guideline,
                         "recruit_start": recruit_dates[0], "recruit_end": recruit_dates[1],
                         "exp_start": exp_dates[0], "exp_end": exp_dates[1], "status": "진행중"
                     })
+                    save_data(st.session_state['campaigns'], st.session_state['applications']) # 데이터 저장
                     st.success("성공적으로 등록되었습니다!")
 
     elif admin_menu == "캠페인 관리(수정/삭제)":
@@ -216,6 +262,7 @@ else:
             
             if st.button("❌ 이 캠페인 완전 삭제", type="primary"):
                 st.session_state['campaigns'].pop(idx)
+                save_data(st.session_state['campaigns'], st.session_state['applications']) # 삭제 후 자동 저장
                 st.rerun()
                 
             with st.form("edit_form"):
@@ -227,6 +274,7 @@ else:
                 edit_guide = st.text_area("가이드라인 수정", value=c['guideline'])
                 if st.form_submit_button("수정 내용 저장"):
                     st.session_state['campaigns'][idx].update({"region": edit_region, "offer": edit_offer, "keywords": edit_keywords, "recruit_count": edit_recruit, "guideline": edit_guide})
+                    save_data(st.session_state['campaigns'], st.session_state['applications']) # 수정 후 자동 저장
                     st.success("수정이 완료되었습니다!")
 
     elif admin_menu == "현황 대시보드":
@@ -263,12 +311,11 @@ else:
                                 app_display = f"{app['name']} ({app['blog_url']})"
                                 if app['shop'] == selected_shop and app['status'] == "신청완료" and app_display in selected_to_approve:
                                     app['status'] = "선정완료"
+                            save_data(st.session_state['campaigns'], st.session_state['applications']) # 승인 후 자동 저장
                             st.success("성공적으로 '선정완료' 상태로 변경되었습니다!")
                             st.rerun()
-                        else:
-                            st.warning("선정할 블로거를 선택해주세요.")
-                else:
-                    st.info("현재 대기 중인(신청완료) 블로거가 없습니다.")
+                        else: st.warning("선정할 블로거를 선택해주세요.")
+                else: st.info("현재 대기 중인 블로거가 없습니다.")
 
             with tab_approved:
                 approved_apps = [a for a in apps if a['status'] in ["선정완료", "리뷰제출완료"]]
@@ -285,18 +332,24 @@ else:
                             "제출된 링크": submitted_link if submitted_link else "미제출"
                         })
                     st.dataframe(pd.DataFrame(table_data_a), column_config={"계정URL": st.column_config.LinkColumn("계정URL"), "제출된 링크": st.column_config.LinkColumn("제출된 링크")}, hide_index=True, use_container_width=True)
-                else:
-                    st.info("아직 이 캠페인에 선정된 블로거가 없습니다.")
+                else: st.info("아직 선정된 블로거가 없습니다.")
             
-            # [해결 2] 마감 리포트 디자인 및 클릭 링크 완벽 개편
+            # ==========================================
+            # 📈 3가지 랜덤 마감 코멘트 시스템
+            # ==========================================
             st.markdown("---")
             if st.button("📈 자동 마감 보고서 생성"):
                 completed = [a['review_link'] for a in apps if a['review_link'] != ""]
                 
-                # 전문적인 에이전시 보고용 멘트로 변경
-                eval_comment = f"대표님, 안녕하십니까. 위드멤버 마케팅팀입니다.<br>이번 <b>[{selected_shop}]</b> 체험단 캠페인이 성공적으로 마감되었습니다.<br><br>요청하신 메인 키워드 <b>'{current_cam['keywords']}'</b>(을)를 타겟으로 하여 총 <b>{len(completed)}명</b>의 검증된 프리미엄 리뷰어가 포스팅을 완료했습니다. 단순 조회수 증가를 넘어, 네이버 플레이스 5대 진단 포인트를 철저히 준수하고 잠재 고객의 방문을 유도하는 정중한 존댓말과 후킹 문구를 적용하여 실제 매장 유입을 극대화할 수 있도록 세팅을 완료하였습니다."
+                # 랜덤으로 송출될 3가지 코멘트 풀 생성
+                comments_pool = [
+                    f"대표님, 안녕하십니까. 위드멤버 마케팅팀입니다.<br>이번 <b>[{selected_shop}]</b> 체험단 캠페인이 성공적으로 마감되었습니다.<br><br>요청하신 메인 키워드 <b>'{current_cam['keywords']}'</b>(을)를 타겟으로 하여 총 <b>{len(completed)}명</b>의 검증된 프리미엄 리뷰어가 포스팅을 완료했습니다. 단순 조회수 증가를 넘어, 네이버 플레이스 5대 진단 포인트를 철저히 준수하고 잠재 고객의 방문을 유도하는 정중한 존댓말과 후킹 문구를 적용하여 실제 매장 유입을 극대화할 수 있도록 세팅을 완료하였습니다.",
+                    f"안녕하세요 대표님, 위드멤버 마케팅팀입니다.<br><b>[{selected_shop}]</b>의 체험단 프로젝트가 성황리에 마무리되어 최종 결과를 보고드립니다.<br><br>전달 주신 핵심 키워드 <b>'{current_cam['keywords']}'</b>에 맞춰 총 <b>{len(completed)}건</b>의 고품질 리뷰 발행이 완료되었습니다. 모든 포스팅은 단순 나열식 리뷰를 지양하고, 매장의 매력을 최대한 어필하는 활동성 있는 사진과 후킹 멘트로 구성되었습니다. 이를 통해 스마트플레이스로의 자연스러운 검색 유입 및 전환율 상승이 강력하게 기대됩니다.",
+                    f"위드멤버 마케팅팀에서 <b>[{selected_shop}]</b> 캠페인 최종 마감 현황을 안내해 드립니다.<br><br>총 <b>{len(completed)}명</b>의 우수 블로거들이 <b>'{current_cam['keywords']}'</b> 키워드를 중심으로 매장의 장점을 생생하게 포스팅하였습니다. 특히 당사의 까다로운 리뷰 가이드라인(존댓말 필수 사용, 새소식 연계 등)이 100% 반영되어, 검색 유저들에게 높은 신뢰감을 주고 실제 오프라인 방문으로 즉시 이어질 수 있는 탄탄한 온라인 마케팅 기반이 마련되었습니다."
+                ]
+                # 코멘트 중 하나를 무작위로 선택
+                eval_comment = random.choice(comments_pool)
 
-                # HTML 보고서 생성 (word-break 적용하여 링크가 튀어나가지 않음, a 태그로 클릭 이동 구현)
                 html_code = f"""
                 <html>
                 <head><script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script></head>
@@ -304,21 +357,17 @@ else:
                     <div id="rpt" style="background:#FFF; padding:40px; border:1px solid #EAECEF; border-radius:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
                         <h2 style="color:#1A1A1A; border-bottom: 2px solid #4A90E2; padding-bottom: 15px; margin-bottom: 25px;">📊 [{selected_shop}] 마케팅 결과 보고서</h2>
                         <p style="font-size: 1.05rem; color: #333;"><b>수신:</b> {selected_shop} 대표님<br><b>발신:</b> 위드멤버 마케팅팀</p>
-                        
                         <div style="background:#F8F9FA; padding:25px; border-radius:10px; margin: 25px 0; line-height: 1.8; font-size: 0.95rem; color:#212529;">
                             {eval_comment}
                         </div>
-                        
                         <h4 style="color:#2C3E50; margin-bottom: 15px; border-left: 4px solid #4A90E2; padding-left: 10px;">🔗 최종 발행된 리뷰 포스팅 링크</h4>
                         <div style="background:#FFF; border: 1px solid #EAECEF; padding: 20px; border-radius: 10px; word-break: break-all; line-height: 2.0; font-size: 0.95rem;">
                 """
                 
                 if len(completed) > 0:
                     for idx, link in enumerate(completed):
-                        # 실제 링크를 그대로 출력하고, 클릭 시 새 창(_blank)에서 열리도록 a 태그 사용
                         html_code += f"<div style='margin-bottom: 8px;'><b>{idx+1}.</b> <a href='{link}' target='_blank' style='color:#4A90E2; text-decoration:underline;'>{link}</a></div>"
-                else:
-                    html_code += "<div style='color:#868E96;'>아직 제출된 리뷰 포스팅이 없습니다.</div>"
+                else: html_code += "<div style='color:#868E96;'>아직 제출된 리뷰 포스팅이 없습니다.</div>"
                     
                 html_code += """
                         </div>
@@ -334,6 +383,4 @@ else:
                 </body>
                 </html>
                 """
-                
-                # Height를 넉넉하게 주어 스크롤 없이 전체 보고서를 볼 수 있게 세팅
                 components.html(html_code, height=900, scrolling=True)
