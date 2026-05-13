@@ -233,9 +233,6 @@ else:
                 st.dataframe(df, column_config={"계정URL": st.column_config.LinkColumn("계정URL"), "링크주소": st.column_config.LinkColumn("링크주소")}, hide_index=True, use_container_width=True)
             else: st.write("아직 이 캠페인에 신청한 블로거가 없습니다.")
             
-            # ==========================================
-            # 📈 업데이트된 화이트 톤 프리미엄 마감 보고서
-            # ==========================================
             st.markdown("---")
             if st.button("📈 자동 마감 보고서 출력"):
                 completed = [app['review_link'] for app in app_list if app['review_link'] != ""]
@@ -243,45 +240,34 @@ else:
                 target_count = current_campaign['recruit_count']
                 completed_count = len(completed)
                 
-                # 자동 평가 멘트 생성 (위드멤버 전략 반영)
                 eval_comment = f"본 캠페인은 목표 인원 {target_count}명 중 <b>{completed_count}명</b>의 검증된 리뷰어가 참여하여 성공적으로 포스팅을 완료했습니다. 전달해주신 메인 키워드 <b>'{keywords}'</b>를 중심으로 검색 노출이 최적화될 수 있도록 가이드되었으며, 리뷰 내 정중한 존댓말과 후킹 문구를 배치하여 네이버 플레이스 방문 전환율을 효과적으로 높일 수 있도록 세팅되었습니다."
 
-                # HTML 리포트 생성 (깔끔한 화이트 테마 적용)
-                report_html = f"""
-                <div style="background-color:#FFFFFF; color:#212529; padding:40px; border-radius:12px; border:1px solid #EAECEF; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top:20px; font-family:'Pretendard', sans-serif;">
-                    <div style="text-align:center; margin-bottom: 30px;">
-                        <h2 style="color:#1A1A1A; font-weight:900; margin-bottom:5px;">[{selected_shop}] 캠페인 최종 마감 리포트</h2>
-                        <p style="color:#868E96; font-size:0.9rem; margin-top:0;">위드멤버 프리미엄 체험단 마케팅 결과 보고</p>
-                    </div>
-                    
-                    <hr style="border: 0; border-top: 2px solid #4A90E2; margin-bottom: 30px;">
-
-                    <h4 style="color:#2C3E50; border-left: 4px solid #4A90E2; padding-left: 10px; margin-bottom:15px;">1. 캠페인 종합 요약</h4>
-                    <ul style="background-color:#F8F9FA; padding:20px 20px 20px 40px; border-radius:8px; line-height:1.8; color:#495057; font-size:0.95rem;">
-                        <li><b>진행 매장명:</b> {selected_shop}</li>
-                        <li><b>타겟 키워드:</b> <span style="color:#4A90E2; font-weight:bold;">{keywords}</span></li>
-                        <li><b>리뷰 달성률:</b> 총 {completed_count}건 포스팅 완료 (목표 {target_count}명)</li>
-                    </ul>
-
-                    <h4 style="color:#2C3E50; border-left: 4px solid #4A90E2; padding-left: 10px; margin-top: 30px; margin-bottom:15px;">2. 마감 종합 평가 및 기대 효과</h4>
-                    <div style="background-color:#F0F4F8; padding:20px; border-radius:8px; color:#333; line-height:1.6; font-size:0.95rem;">
-                        {eval_comment}
-                    </div>
-
-                    <h4 style="color:#2C3E50; border-left: 4px solid #4A90E2; padding-left: 10px; margin-top: 30px; margin-bottom:15px;">3. 발행된 리뷰 링크 취합</h4>
-                    <div style="padding-left:10px; line-height:1.8; font-size:0.95rem;">
-                """
+                # HTML 코드의 띄어쓰기를 없애 오류를 완벽히 차단했습니다.
+                report_html = f"""<div style="background-color:#FFFFFF; color:#212529; padding:40px; border-radius:12px; border:1px solid #EAECEF; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top:20px; font-family:'Pretendard', sans-serif;">
+<div style="text-align:center; margin-bottom: 30px;">
+<h2 style="color:#1A1A1A; font-weight:900; margin-bottom:5px;">[{selected_shop}] 캠페인 최종 마감 리포트</h2>
+<p style="color:#868E96; font-size:0.9rem; margin-top:0;">위드멤버 프리미엄 체험단 마케팅 결과 보고</p>
+</div>
+<hr style="border: 0; border-top: 2px solid #4A90E2; margin-bottom: 30px;">
+<h4 style="color:#2C3E50; border-left: 4px solid #4A90E2; padding-left: 10px; margin-bottom:15px;">1. 캠페인 종합 요약</h4>
+<ul style="background-color:#F8F9FA; padding:20px 20px 20px 40px; border-radius:8px; line-height:1.8; color:#495057; font-size:0.95rem;">
+<li><b>진행 매장명:</b> {selected_shop}</li>
+<li><b>타겟 키워드:</b> <span style="color:#4A90E2; font-weight:bold;">{keywords}</span></li>
+<li><b>리뷰 달성률:</b> 총 {completed_count}건 포스팅 완료 (목표 {target_count}명)</li>
+</ul>
+<h4 style="color:#2C3E50; border-left: 4px solid #4A90E2; padding-left: 10px; margin-top: 30px; margin-bottom:15px;">2. 마감 종합 평가 및 기대 효과</h4>
+<div style="background-color:#F0F4F8; padding:20px; border-radius:8px; color:#333; line-height:1.6; font-size:0.95rem;">
+{eval_comment}
+</div>
+<h4 style="color:#2C3E50; border-left: 4px solid #4A90E2; padding-left: 10px; margin-top: 30px; margin-bottom:15px;">3. 발행된 리뷰 링크 취합</h4>
+<div style="padding-left:10px; line-height:1.8; font-size:0.95rem;">"""
                 
-                # 수집된 링크를 클릭 가능한 형태로 추가
                 if len(completed) > 0:
                     for idx, link in enumerate(completed):
                         report_html += f"<div><b>{idx+1}.</b> <a href='{link}' target='_blank' style='color:#4A90E2; text-decoration:none;'>{link}</a></div>"
                 else:
                     report_html += "<div style='color:#868E96;'>아직 제출된 리뷰 포스팅이 없습니다.</div>"
                 
-                report_html += """
-                    </div>
-                </div>
-                """
+                report_html += "</div></div>"
                 
                 st.markdown(report_html, unsafe_allow_html=True)
