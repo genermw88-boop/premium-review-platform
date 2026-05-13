@@ -100,7 +100,6 @@ def open_campaign_modal(c):
     with col_info_2:
         place_link_html = f"<a href='{c.get('place_link', '#')}' target='_blank' style='color:#4A90E2; text-decoration:none; font-weight:bold;'>👉 플레이스 바로가기</a>" if c.get('place_link') else "등록된 링크가 없습니다."
         
-        # [연장 기능 추가] 연장일수를 계산하여 팝업창에 직관적으로 보여줌
         extend_days = c.get('exp_extend_days', 0)
         exp_start_val = c['exp_start']
         exp_end_val = c['exp_end']
@@ -201,7 +200,8 @@ with st.sidebar:
 # 📱 메인 화면 분기
 # ==========================================
 if not st.session_state['admin_logged_in']:
-    st.markdown('<div style="width:100%; padding: 50px 20px; background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url(\'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=1200&auto=format&fit=crop\') center/cover; border-radius:20px; text-align:center; margin-bottom:20px;"><h1 style="color:white;">PREMIUM CAMPAIGN</h1><p style="color:#F1E5AC;">위드멤버 프리미엄 체험단</p></div>', unsafe_allow_html=True)
+    # [수정] 배너 하단의 "위드멤버 프리미엄 체험단" 문구를 완전히 제거했습니다.
+    st.markdown('<div style="width:100%; padding: 50px 20px; background: linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.3)), url(\'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=1200&auto=format&fit=crop\') center/cover; border-radius:20px; text-align:center; margin-bottom:20px;"><h1 style="color:white; margin:0;">PREMIUM CAMPAIGN</h1></div>', unsafe_allow_html=True)
     
     col_search1, col_search2 = st.columns(2)
     with col_search1: search_region = st.text_input("📍 지역 검색", placeholder="예: 강남, 부천")
@@ -263,7 +263,6 @@ else:
             dcol1, dcol2, dcol3 = st.columns(3)
             with dcol1: recruit_dates = st.date_input("모집 기간", [today.date(), default_recruit_end.date()])
             with dcol2: exp_dates = st.date_input("체험 기간", [default_exp_start.date(), default_exp_end.date()])
-            # [연장 기능 추가] 처음 세팅할 때는 보통 0일 연장이지만, 입력란을 제공
             with dcol3: exp_extend_days = st.number_input("체험기간 연장 설정 (일 단위)", min_value=0, value=0, help="필요시 연장할 일수를 입력하세요.")
             
             if st.form_submit_button("등록 완료"):
@@ -278,7 +277,7 @@ else:
                         "keywords": keywords, "platform": platform, "recruit_count": recruit_count, 
                         "guideline": guideline, "recruit_start": recruit_dates[0], "recruit_end": recruit_dates[1],
                         "exp_start": exp_dates[0], "exp_end": exp_dates[1], 
-                        "exp_extend_days": exp_extend_days, # 데이터베이스에 연장일수 저장
+                        "exp_extend_days": exp_extend_days,
                         "status": "진행중"
                     })
                     save_data(st.session_state['campaigns'], st.session_state['applications'])
@@ -313,7 +312,6 @@ else:
                         edit_keywords = st.text_input("키워드 수정", value=c['keywords'])
                         edit_recruit = st.number_input("모집 인원 수정", value=int(c['recruit_count']))
                         
-                        # [연장 기능 추가] 언제든지 관리 메뉴에서 연장 일수를 추가/수정 가능
                         st.write("---")
                         edit_extend_days = st.number_input("⏳ 체험기간 연장 (일 단위)", min_value=0, value=int(c.get('exp_extend_days', 0)), help="숫자를 올리면 블로거 화면에 빨간색으로 연장 마감일이 자동 표시됩니다.")
                         st.write("---")
@@ -325,7 +323,7 @@ else:
                                 "region": edit_region, "place_link": edit_place_link, 
                                 "offer": edit_offer, "keywords": edit_keywords, 
                                 "recruit_count": edit_recruit, "guideline": edit_guide,
-                                "exp_extend_days": edit_extend_days # 수정한 연장일수 덮어쓰기
+                                "exp_extend_days": edit_extend_days
                             })
                             save_data(st.session_state['campaigns'], st.session_state['applications'])
                             st.success(f"수정이 완료되었습니다! (연장 {edit_extend_days}일 적용)")
