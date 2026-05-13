@@ -5,19 +5,39 @@ from datetime import datetime, timedelta
 # 1. 페이지 설정
 st.set_page_config(page_title="위드멤버 프리미엄 체험단", layout="wide", initial_sidebar_state="collapsed")
 
-# 2. CSS 
+# 2. CSS (매장명 상단 박스 디자인 적용)
 st.markdown("""
 <style>
     .stApp { background-color: #F4F7F6; color: #212529; font-family: 'Pretendard', sans-serif; }
     .card-box { background-color: #FFFFFF; padding: 18px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.04); margin-bottom: 25px; border: 1px solid #EAECEF; transition: all 0.3s; }
     .card-box:hover { transform: translateY(-7px); box-shadow: 0 15px 35px rgba(0,0,0,0.08); }
+    
     .badge-blog { background-color: #03C75A; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
     .badge-insta { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
     .badge-yt { background-color: #FF0000; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: bold; }
-    .offer-text { font-size: 0.95rem; color: #4A90E2; font-weight: 800; margin-top: 5px; margin-bottom: 5px; }
+    
+    .offer-text { font-size: 0.95rem; color: #4A90E2; font-weight: 800; margin-top: 10px; margin-bottom: 5px; }
     .info-text { font-size: 0.85rem; color: #666666; margin-bottom: 4px; }
-    button[kind="tertiary"] { justify-content: flex-start !important; padding: 0px !important; margin-top: 10px !important; font-size: 1.25rem !important; font-weight: 900 !important; color: #1A1A1A !important; }
-    button[kind="tertiary"]:hover { color: #4A90E2 !important; background-color: transparent !important; }
+    
+    /* 매장명(타이틀)을 1_7.png 요청처럼 하얀 박스 형태로 상단에 띄우기 */
+    button[kind="tertiary"] { 
+        background-color: #FFFFFF !important;
+        border: 2px solid #EAECEF !important;
+        border-radius: 12px !important;
+        padding: 10px 15px !important; 
+        margin-bottom: 15px !important; 
+        font-size: 1.15rem !important; 
+        font-weight: 900 !important; 
+        color: #1A1A1A !important; 
+        justify-content: center !important; 
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02) !important;
+    }
+    button[kind="tertiary"]:hover { 
+        border-color: #4A90E2 !important; 
+        color: #4A90E2 !important; 
+        background-color: #F8F9FA !important;
+    }
+    
     [data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #EAECEF; }
 </style>
 """, unsafe_allow_html=True)
@@ -127,20 +147,24 @@ if not st.session_state['admin_logged_in']:
         for idx, c in enumerate(st.session_state['campaigns']):
             with cols[idx % 4]: 
                 st.markdown('<div class="card-box">', unsafe_allow_html=True)
-                if c['image']: st.image(c['image'], use_container_width=True)
-                else: st.markdown('<div style="height:200px; background:#F1F3F5; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#ADB5BD; font-weight:bold;">이미지 준비중</div>', unsafe_allow_html=True)
                 
-                badge_class = "badge-blog"
-                if "인스타" in c['platform']: badge_class = "badge-insta"
-                elif "유튜브" in c['platform']: badge_class = "badge-yt"
-                st.markdown(f'<div style="margin-top:12px;"><span class="{badge_class}">{c["platform"]}</span></div>', unsafe_allow_html=True)
-                
+                # [업데이트] 1. 매장명을 제일 상단의 하얀색 박스 버튼으로 배치
                 if st.button(c['shop'], key=f"title_btn_{c['id']}", type="tertiary", use_container_width=True):
                     open_campaign_modal(c)
                 
+                # 2. 그 아래에 이미지 배치
+                if c['image']: st.image(c['image'], use_container_width=True)
+                else: st.markdown('<div style="height:200px; background:#F1F3F5; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#ADB5BD; font-weight:bold;">이미지 준비중</div>', unsafe_allow_html=True)
+                
+                # 3. 뱃지 및 제공내역
+                badge_class = "badge-blog"
+                if "인스타" in c['platform']: badge_class = "badge-insta"
+                elif "유튜브" in c['platform']: badge_class = "badge-yt"
+                st.markdown(f'<div style="margin-top:15px; margin-bottom:5px;"><span class="{badge_class}">{c["platform"]}</span></div>', unsafe_allow_html=True)
+                
                 st.markdown(f'<div class="offer-text">🎁 {c["offer"]}</div>', unsafe_allow_html=True)
                 st.markdown(f'<div class="info-text">🗓️ 마감: {c["recruit_end"].strftime("%m.%d")}</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="info-text" style="color:#adb5bd; font-size:0.7rem;">👆 매장명을 클릭하면 신청창이 열립니다.</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="info-text" style="color:#adb5bd; font-size:0.75rem;">👆 상단의 매장명을 클릭하세요.</div>', unsafe_allow_html=True)
                 st.markdown('</div>', unsafe_allow_html=True)
 
 else:
@@ -234,7 +258,7 @@ else:
             else: st.write("아직 이 캠페인에 신청한 블로거가 없습니다.")
             
             st.markdown("---")
-            if st.button("📈 자동 마감 보고서 출력"):
+            if st.button("📈 자동 마감 보고서 생성"):
                 completed = [app['review_link'] for app in app_list if app['review_link'] != ""]
                 keywords = current_campaign['keywords']
                 target_count = current_campaign['recruit_count']
@@ -242,7 +266,7 @@ else:
                 
                 eval_comment = f"본 캠페인은 목표 인원 {target_count}명 중 <b>{completed_count}명</b>의 검증된 리뷰어가 참여하여 성공적으로 포스팅을 완료했습니다. 전달해주신 메인 키워드 <b>'{keywords}'</b>를 중심으로 검색 노출이 최적화될 수 있도록 가이드되었으며, 리뷰 내 정중한 존댓말과 후킹 문구를 배치하여 네이버 플레이스 방문 전환율을 효과적으로 높일 수 있도록 세팅되었습니다."
 
-                # HTML 코드의 띄어쓰기를 없애 오류를 완벽히 차단했습니다.
+                # [업데이트] 화면용 HTML 렌더링 (오류 방지를 위해 띄어쓰기 없이 작성)
                 report_html = f"""<div style="background-color:#FFFFFF; color:#212529; padding:40px; border-radius:12px; border:1px solid #EAECEF; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-top:20px; font-family:'Pretendard', sans-serif;">
 <div style="text-align:center; margin-bottom: 30px;">
 <h2 style="color:#1A1A1A; font-weight:900; margin-bottom:5px;">[{selected_shop}] 캠페인 최종 마감 리포트</h2>
@@ -262,12 +286,30 @@ else:
 <h4 style="color:#2C3E50; border-left: 4px solid #4A90E2; padding-left: 10px; margin-top: 30px; margin-bottom:15px;">3. 발행된 리뷰 링크 취합</h4>
 <div style="padding-left:10px; line-height:1.8; font-size:0.95rem;">"""
                 
+                # 다운로드용 전체 HTML 문서 구조
+                download_html = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>{selected_shop} 마감 리포트</title></head><body style="background-color:#F4F7F6; padding:40px; font-family:'Malgun Gothic', sans-serif;">{report_html}"""
+                
                 if len(completed) > 0:
                     for idx, link in enumerate(completed):
-                        report_html += f"<div><b>{idx+1}.</b> <a href='{link}' target='_blank' style='color:#4A90E2; text-decoration:none;'>{link}</a></div>"
+                        link_html = f"<div><b>{idx+1}.</b> <a href='{link}' target='_blank' style='color:#4A90E2; text-decoration:none;'>{link}</a></div>"
+                        report_html += link_html
+                        download_html += link_html
                 else:
-                    report_html += "<div style='color:#868E96;'>아직 제출된 리뷰 포스팅이 없습니다.</div>"
+                    empty_msg = "<div style='color:#868E96;'>아직 제출된 리뷰 포스팅이 없습니다.</div>"
+                    report_html += empty_msg
+                    download_html += empty_msg
                 
                 report_html += "</div></div>"
+                download_html += "</div></div></body></html>"
                 
                 st.markdown(report_html, unsafe_allow_html=True)
+                
+                # [업데이트] 보고서 파일 다운로드 버튼 추가
+                st.write("")
+                st.download_button(
+                    label="📥 보고서 파일(HTML) 다운로드",
+                    data=download_html,
+                    file_name=f"{selected_shop}_체험단_마감보고서.html",
+                    mime="text/html",
+                    use_container_width=True
+                )
